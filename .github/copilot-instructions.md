@@ -87,8 +87,8 @@ PinStick/
 
 | Workflow | Trigger | What It Does |
 |---|---|---|
-| `prerelease.yml` | PR marked ready for review | Builds macOS app, creates prerelease (includes Windows/Linux placeholder job for future ports) |
-| `build-and-release.yml` | Push to `main` | Builds macOS app, tags release, publishes (includes Windows/Linux placeholder job for future ports) |
+| `prerelease.yml` | PR marked ready for review | Builds macOS app, creates prerelease; includes Windows/Linux placeholder job for future ports |
+| `build-and-release.yml` | Push to `main` | Builds macOS app, tags release, publishes; includes Windows/Linux placeholder job for future ports |
 
 ### Testing on Windows & Linux Without Local VMs
 
@@ -181,7 +181,7 @@ Trigger the release workflow manually with `workflow_dispatch`:
 ```
 PinStick/
 ├── Jot.xcodeproj.zip       # Xcode project (unzip before building)
-├── JotApp.swift            # App entry point + ContentView
+├── PinStickApp.swift       # App entry point + ContentView
 ├── Item.swift              # Data model
 ├── Jot.entitlements        # macOS sandbox entitlements
 ├── Contents.json           # AppIcon.xcassets icon catalog
