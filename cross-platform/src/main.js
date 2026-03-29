@@ -15,7 +15,7 @@ function loadNote() {
     saved = localStorage.getItem("pinstick-note") ?? "";
   } catch (err) {
     console.warn("Unable to read saved note:", err);
-    setStatus("Could not load saved note");
+    setStatus("Could not load saved note from local storage");
   }
   noteEl.value = saved;
   setEdited(saved.length > 0);
