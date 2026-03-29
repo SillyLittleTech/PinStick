@@ -10,8 +10,8 @@ struct PinState {
     pinned: bool,
 }
 
-/// Stores pin state; Mutex gives thread-safe interior mutability for concurrent access, and poison recovery is safe
-/// because we only track a bool with no invariants.
+/// Stores pin state; Mutex provides thread-safe interior mutability for concurrent access.
+/// Poison recovery via `unwrap_or_else` is safe because the bool has no invariants and can be safely overwritten.
 struct PinStore(Mutex<bool>);
 
 #[tauri::command]
