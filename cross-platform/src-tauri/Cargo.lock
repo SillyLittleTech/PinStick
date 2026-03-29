@@ -2000,7 +2000,7 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "pinstick"
-version = "2.5.3"
+version = "2.5.4"
 dependencies = [
  "serde",
  "serde_json",
