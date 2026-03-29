@@ -60,19 +60,3 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
-
-# Node / Rust (cross-platform app)
-node_modules/
-pnpm-lock.yaml
-target/
-dist/
-
-# Flutter
-.dart_tool/
-.packages
-build/
-cross-platform/flutter/.flutter-plugins
-cross-platform/flutter/.flutter-plugins-dependencies
-cross-platform/flutter/.packages
-cross-platform/flutter/.dart_tool
-cross-platform/flutter/build
