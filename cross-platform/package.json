@@ -1,0 +1,14 @@
+{
+  "name": "pinstick-cross",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "tauri": "tauri",
+    "build": "tauri build --bundles none",
+    "check": "tauri build --bundles none --ci --debug"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "1.5.10"
+  }
+}

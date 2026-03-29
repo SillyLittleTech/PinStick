@@ -60,3 +60,9 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# Cross-platform (Tauri)
+node_modules/
+pnpm-lock.yaml
+target/
+dist/

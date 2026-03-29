@@ -1,0 +1,32 @@
+{
+  "build": {
+    "beforeBuildCommand": "",
+    "beforeDevCommand": "",
+    "devPath": "../src",
+    "distDir": "../src"
+  },
+  "package": {
+    "productName": "PinStick",
+    "version": "1.0.0"
+  },
+  "tauri": {
+    "bundle": {
+      "active": true,
+      "identifier": "slf.pinstick",
+      "icon": [
+        "icons/icon.png"
+      ]
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "PinStick",
+        "width": 420,
+        "height": 320,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true
+      }
+    ]
+  }
+}
