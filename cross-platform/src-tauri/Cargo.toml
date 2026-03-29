@@ -1,6 +1,6 @@
 [package]
 name = "pinstick"
-version = "2.5.6"
+version = "2.5.7"
 description = "PinStick cross-platform note pinning app"
 authors = ["SillyLittleTech"]
 edition = "2021"

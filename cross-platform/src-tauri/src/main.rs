@@ -10,8 +10,8 @@ struct PinState {
     pinned: bool,
 }
 
-/// Stores pin state; Mutex is used because Tauri commands run on the main thread and we just need interior mutability.
-/// Poison recovery is safe because we only track a bool with no invariants.
+/// Stores pin state; Mutex gives thread-safe interior mutability for concurrent access, and poison recovery is safe
+/// because we only track a bool with no invariants.
 struct PinStore(Mutex<bool>);
 
 #[tauri::command]
