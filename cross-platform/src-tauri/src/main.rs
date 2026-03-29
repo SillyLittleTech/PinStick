@@ -10,6 +10,7 @@ struct PinState {
     pinned: bool,
 }
 
+/// Stores pin state; poison recovery is safe because we only track a bool with no invariants.
 struct PinStore(Mutex<bool>);
 
 #[tauri::command]
