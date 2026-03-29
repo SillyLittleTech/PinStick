@@ -60,3 +60,7 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# Node/Tauri artifacts
+node_modules/
+cross-platform/node_modules/
