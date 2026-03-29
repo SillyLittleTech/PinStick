@@ -63,6 +63,10 @@ jobs:
         working-directory: cross-platform
         run: npm ci
 
+      - name: Generate Tauri icons
+        working-directory: cross-platform
+        run: npx tauri icon ../JotIcon-iOS-Default-1024x1024@1x.png
+
       - name: Build cross-platform app
         working-directory: cross-platform
         run: npm run build -- --verbose
