@@ -80,18 +80,19 @@ jobs:
         run: |
           shopt -s nullglob globstar
           installer_candidates=(
-            cross-platform/src-tauri/target/release/bundle/**/*[Ss][Ee][Tt][Uu][Pp]*.exe
-            cross-platform/src-tauri/target/release/bundle/**/*.msi
+            cross-platform/src-tauri/target/release/bundle/nsis/**/*.exe
+            cross-platform/src-tauri/target/release/bundle/msi/**/*.msi
           )
           if [ ${#installer_candidates[@]} -eq 0 ]; then
-            echo "No Windows installer-like artifacts found under cross-platform/src-tauri/target/release/bundle (expected *setup*.exe or .msi)"
+            echo "No Windows installer artifacts found under cross-platform/src-tauri/target/release/bundle/{nsis,msi,wix}"
             exit 1
           fi
-          installer_path="${installer_candidates[0]}"
-          installer_ext="${installer_path##*.}"
-          installer_name="PinStick-${APP_VERSION}-windows.${installer_ext}"
-          cp "$installer_path" "$installer_name"
-          printf "WINDOWS_INSTALLER=%s\n" "$installer_name" >> "$GITHUB_ENV"
+          artifact_dir="PinStick-${APP_VERSION}-windows"
+          mkdir -p "$artifact_dir"
+          for installer_path in "${installer_candidates[@]}"; do
+            cp "$installer_path" "$artifact_dir/"
+          done
+          printf "WINDOWS_ARTIFACT_DIR=%s\n" "$artifact_dir" >> "$GITHUB_ENV"
 
       - name: Collect Linux AppImage
         if: matrix.os == 'ubuntu-22.04'
@@ -117,7 +118,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PinStick-windows
-          path: ${{ env.WINDOWS_INSTALLER }}
+          path: ${{ env.WINDOWS_ARTIFACT_DIR }}
           if-no-files-found: error
 
       - name: Upload Linux artifact
