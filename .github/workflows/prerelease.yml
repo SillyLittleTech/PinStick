@@ -86,22 +86,15 @@ jobs:
         shell: bash
         run: |
           shopt -s nullglob globstar
-          src=(
-            cross-platform/src-tauri/target/release/bundle/**/*.exe
+          installer_candidates=(
+            cross-platform/src-tauri/target/release/bundle/**/*[Ss][Ee][Tt][Uu][Pp]*.exe
             cross-platform/src-tauri/target/release/bundle/**/*.msi
           )
-          if [ ${#src[@]} -eq 0 ]; then
-            echo "No Windows installer found under cross-platform/src-tauri/target/release/bundle"
+          if [ ${#installer_candidates[@]} -eq 0 ]; then
+            echo "No Windows installer-like artifacts found under cross-platform/src-tauri/target/release/bundle (expected *setup*.exe or .msi)"
             exit 1
           fi
-          installer_path="${src[0]}"
-          for candidate in "${src[@]}"; do
-            base_name="$(basename "$candidate")"
-            if [[ "$base_name" == *setup*.exe || "$base_name" == *.msi ]]; then
-              installer_path="$candidate"
-              break
-            fi
-          done
+          installer_path="${installer_candidates[0]}"
           installer_ext="${installer_path##*.}"
           installer_name="PinStick-${APP_VERSION}-windows.${installer_ext}"
           cp "$installer_path" "$installer_name"
