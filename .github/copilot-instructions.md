@@ -87,8 +87,8 @@ PinStick/
 
 | Workflow | Trigger | What It Does |
 |---|---|---|
-| `prerelease.yml` | PR marked ready for review | Builds macOS app, creates prerelease |
-| `build-and-release.yml` | Push to `main` | Builds macOS app, tags release, publishes |
+| `prerelease.yml` | PR marked ready for review | Builds macOS app, creates prerelease (includes Windows/Linux placeholder job for future ports) |
+| `build-and-release.yml` | Push to `main` | Builds macOS app, tags release, publishes (includes Windows/Linux placeholder job for future ports) |
 
 ### Testing on Windows & Linux Without Local VMs
 

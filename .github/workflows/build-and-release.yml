@@ -7,6 +7,7 @@ on:
     paths:
       - '**.swift'
       - '**.png'
+      - '.github/scripts/**'
       - 'Contents.json'
       - 'Jot.xcodeproj.zip'
       - '.github/workflows/build-and-release.yml'
@@ -38,10 +39,9 @@ jobs:
       - name: Extract version from Xcode project
         id: extract
         run: |
-          unzip -o Jot.xcodeproj.zip -d .
-          VERSION=$(grep -m1 'MARKETING_VERSION = ' Jot.xcodeproj/project.pbxproj | awk -F ' = ' '{ gsub(/;/,"",$2); print $2; exit }')
-          echo "version=v$VERSION" >> $GITHUB_OUTPUT
-          echo "Detected version: v$VERSION"
+          VERSION=$(.github/scripts/extract-version.sh)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION"
 
       - name: Check if tag exists
         id: check_tag
@@ -78,9 +78,9 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO
 
-          APP_PATH=$(find build -name "Jot.app" -type d | head -1)
+          APP_PATH=$(find build -name "PinStick.app" -type d | head -1)
           if [ -z "$APP_PATH" ]; then
-            echo "❌ Jot.app not found"
+            echo "❌ PinStick.app not found"
             exit 1
           fi
 
@@ -95,29 +95,31 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           VERSION="${{ needs.check-version.outputs.version }}"
-          git tag "$VERSION" 2>/dev/null || echo "Local tag $VERSION already exists, proceeding with push"
-          if ! git push origin "$VERSION"; then
-            echo "::error::Tag $VERSION already exists on remote. A release for this version may already exist."
-            exit 1
+          if git show-ref --tags --quiet "$VERSION"; then
+            echo "Local tag $VERSION already exists"
+          else
+            git tag "$VERSION"
           fi
+          git push origin "$VERSION"
 
       - name: Create Release
-        uses: actions/create-release@v1
-        id: create_release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.check-version.outputs.version }}
-          release_name: "PinStick ${{ needs.check-version.outputs.version }}"
+          name: "PinStick ${{ needs.check-version.outputs.version }}"
           draft: ${{ github.event.inputs.draft == 'true' }}
           prerelease: false
-
-      - name: Upload macOS App
-        uses: actions/upload-release-asset@v1
+          files: ./build/PinStick.app.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./build/PinStick.app.zip
-          asset_name: PinStick.app.zip
-          asset_content_type: application/zip
+
+  cross-platform-readiness:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Placeholder for future Windows/Linux builds
+        run: |
+          echo "Cross-platform build pipeline placeholder on ${{ runner.os }}."
+          echo "Add Windows/Linux build steps here once the port exists."
