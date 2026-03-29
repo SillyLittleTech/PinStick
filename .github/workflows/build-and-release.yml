@@ -82,7 +82,6 @@ jobs:
           installer_candidates=(
             cross-platform/src-tauri/target/release/bundle/nsis/**/*.exe
             cross-platform/src-tauri/target/release/bundle/msi/**/*.msi
-            cross-platform/src-tauri/target/release/bundle/wix/**/*.msi
           )
           if [ ${#installer_candidates[@]} -eq 0 ]; then
             echo "No Windows installer artifacts found under cross-platform/src-tauri/target/release/bundle/{nsis,msi,wix}"
