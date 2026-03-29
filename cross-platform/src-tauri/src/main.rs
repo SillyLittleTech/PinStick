@@ -24,9 +24,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![toggle_pin])
         .setup(|app| {
             if let Some(window) = app.get_window("main") {
-                window
-                    .set_title("PinStick")
-                    .map_err(|e| tauri::Error::Runtime(e.to_string()))?;
+                window.set_title("PinStick")?;
             }
             Ok(())
         })

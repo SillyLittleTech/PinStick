@@ -9,7 +9,7 @@ A lightweight Tauri app lives under `cross-platform/` with the same core feature
 ```bash
 cd cross-platform
 npm install
-npm run build -- --bundles none
+npm run build
 ```
 
 On Linux (Ubuntu 22.04, same as CI), install the Tauri GTK/WebKit toolchain first:

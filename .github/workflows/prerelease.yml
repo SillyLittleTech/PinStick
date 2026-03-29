@@ -16,66 +16,6 @@ on:
       - 'cross-platform/**'
 
 jobs:
-  create-prerelease:
-    runs-on: macos-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Extract version from Xcode project
-        id: extract
-        run: |
-          VERSION=$(.github/scripts/extract-version.sh)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Detected version: $VERSION"
-
-      - name: Build macOS App
-        run: |
-          unzip -o Jot.xcodeproj.zip -d .
-          mkdir -p build
-
-          xcodebuild build \
-            -project Jot.xcodeproj \
-            -target Jot \
-            -configuration Release \
-            -skipPackagePluginValidation \
-            SYMROOT=build \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_ALLOWED=NO
-
-          APP_PATH=$(find build -name "PinStick.app" -type d | head -1)
-          if [ -z "$APP_PATH" ]; then
-            echo "❌ PinStick.app not found"
-            exit 1
-          fi
-
-          OUT_ZIP="$(pwd)/build/PinStick.app.zip"
-          APP_DIR="$(dirname "$APP_PATH")"
-          APP_NAME="$(basename "$APP_PATH")"
-          ( cd "$APP_DIR" && zip -r "$OUT_ZIP" "$APP_NAME" )
-          echo "✅ macOS build succeeded"
-
-      - name: Create Prerelease
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.extract.outputs.version }}-prerelease-${{ github.run_number }}
-          name: "PinStick ${{ steps.extract.outputs.version }} - Prerelease (PR #${{ github.event.pull_request.number }})"
-          body: |
-            🧪 **Prerelease Build** from PR #${{ github.event.pull_request.number }}
-
-            **Branch:** ${{ github.event.pull_request.head.ref }}
-            **Author:** @${{ github.event.pull_request.user.login }}
-
-            This is a prerelease build. Testing and feedback welcome!
-          draft: false
-          prerelease: true
-          files: ./build/PinStick.app.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   cross-platform-build:
     runs-on: ${{ matrix.os }}
     permissions:
@@ -83,6 +23,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-22.04, windows-latest, macos-latest]
+    needs: []
     steps:
       - uses: actions/checkout@v4
 
@@ -101,7 +42,6 @@ jobs:
             curl \
             wget \
             libssl-dev \
-            libappindicator3-dev \
             patchelf \
             pkg-config
 

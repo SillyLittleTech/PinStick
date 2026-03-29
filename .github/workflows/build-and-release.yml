@@ -5,115 +5,11 @@ on:
     branches:
       - main
     paths:
-      - '**.swift'
-      - '**.png'
-      - '.github/scripts/**'
-      - 'Contents.json'
-      - 'Jot.xcodeproj.zip'
       - 'cross-platform/**'
       - '.github/workflows/build-and-release.yml'
   workflow_dispatch:
-    inputs:
-      draft:
-        description: 'Create as draft (for testing)'
-        required: true
-        default: 'true'
-        type: choice
-        options:
-          - 'true'
-          - 'false'
 
 jobs:
-  check-version:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      version: ${{ steps.extract.outputs.version }}
-      tag_exists: ${{ steps.check_tag.outputs.exists }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-
-      - name: Extract version from Xcode project
-        id: extract
-        run: |
-          VERSION=$(.github/scripts/extract-version.sh)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Detected version: $VERSION"
-
-      - name: Check if tag exists
-        id: check_tag
-        run: |
-          if git ls-remote --tags --exit-code origin "refs/tags/${{ steps.extract.outputs.version }}" >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Tag already exists!"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "Tag does not exist - ready to build"
-          fi
-
-  build-and-release:
-    needs: check-version
-    if: needs.check-version.outputs.tag_exists == 'false'
-    runs-on: macos-latest
-    permissions:
-      contents: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build macOS App
-        run: |
-          unzip -o Jot.xcodeproj.zip -d .
-          mkdir -p build
-
-          xcodebuild build \
-            -project Jot.xcodeproj \
-            -target Jot \
-            -configuration Release \
-            -skipPackagePluginValidation \
-            SYMROOT=build \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_ALLOWED=NO
-
-          APP_PATH=$(find build -name "PinStick.app" -type d | head -1)
-          if [ -z "$APP_PATH" ]; then
-            echo "❌ PinStick.app not found"
-            exit 1
-          fi
-
-          OUT_ZIP="$(pwd)/build/PinStick.app.zip"
-          APP_DIR="$(dirname "$APP_PATH")"
-          APP_NAME="$(basename "$APP_PATH")"
-          ( cd "$APP_DIR" && zip -r "$OUT_ZIP" "$APP_NAME" )
-          echo "✅ macOS build succeeded"
-
-      - name: Create Git Tag
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          VERSION="${{ needs.check-version.outputs.version }}"
-          if git show-ref --tags --quiet "$VERSION"; then
-            echo "Local tag $VERSION already exists"
-          else
-            git tag "$VERSION"
-          fi
-          git push origin "$VERSION"
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ needs.check-version.outputs.version }}
-          name: "PinStick ${{ needs.check-version.outputs.version }}"
-          draft: ${{ github.event.inputs.draft == 'true' }}
-          prerelease: false
-          files: ./build/PinStick.app.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   cross-platform-build:
     runs-on: ${{ matrix.os }}
     permissions:
@@ -139,7 +35,6 @@ jobs:
             curl \
             wget \
             libssl-dev \
-            libappindicator3-dev \
             patchelf \
             pkg-config
 

@@ -30,12 +30,12 @@ The app was originally built with x64 in mind. To make it ARM-native:
 2. Select the **Jot** target → **Build Settings**.
 3. Set **Architectures** to `$(ARCHS_STANDARD)` (includes `arm64` + `x86_64` automatically).
 4. Set **Build Active Architecture Only** to `No` for Release builds.
-5. Under **Deployment**, set **macOS Deployment Target** to `12.0` or later for full Apple Silicon support.
+5. Under **Deployment**, set **macOS Deployment Target** to `14.0` or later (matching the current project) for full Apple Silicon support.
 
 ### Verifying ARM Compatibility
 ```bash
 # After building, check the binary supports both architectures
-lipo -info build/Release/Jot.app/Contents/MacOS/Jot
+lipo -info build/Release/PinStick.app/Contents/MacOS/PinStick
 # Expected: Architectures in the fat file: arm64 x86_64
 ```
 
