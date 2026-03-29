@@ -1,0 +1,86 @@
+name: Create Prerelease on PR Ready
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - ready_for_review
+    paths:
+      - '.github/workflows/prerelease.yml'
+      - '**.swift'
+      - '**.png'
+      - 'Contents.json'
+      - 'Jot.xcodeproj.zip'
+
+jobs:
+  create-prerelease:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from Xcode project
+        id: extract
+        run: |
+          unzip -o Jot.xcodeproj.zip -d .
+          VERSION=$(grep -m1 'MARKETING_VERSION = ' Jot.xcodeproj/project.pbxproj | awk -F ' = ' '{ gsub(/;/,"",$2); print $2; exit }')
+          echo "version=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: v$VERSION"
+
+      - name: Build macOS App
+        run: |
+          unzip -o Jot.xcodeproj.zip -d .
+          mkdir -p build
+
+          xcodebuild build \
+            -project Jot.xcodeproj \
+            -target Jot \
+            -configuration Release \
+            -skipPackagePluginValidation \
+            SYMROOT=build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ALLOWED=NO
+
+          APP_PATH=$(find build -name "Jot.app" -type d | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "❌ Jot.app not found"
+            exit 1
+          fi
+
+          OUT_ZIP="$(pwd)/build/PinStick.app.zip"
+          APP_DIR="$(dirname "$APP_PATH")"
+          APP_NAME="$(basename "$APP_PATH")"
+          ( cd "$APP_DIR" && zip -r "$OUT_ZIP" "$APP_NAME" )
+          echo "✅ macOS build succeeded"
+
+      - name: Create Prerelease
+        uses: actions/create-release@v1
+        id: create_prerelease
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.extract.outputs.version }}-prerelease-${{ github.run_number }}
+          release_name: "PinStick ${{ steps.extract.outputs.version }} - Prerelease (PR #${{ github.event.pull_request.number }})"
+          body: |
+            🧪 **Prerelease Build** from PR #${{ github.event.pull_request.number }}
+
+            **Branch:** ${{ github.event.pull_request.head.ref }}
+            **Author:** @${{ github.event.pull_request.user.login }}
+
+            This is a prerelease build. Testing and feedback welcome!
+          draft: false
+          prerelease: true
+
+      - name: Upload macOS App
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_prerelease.outputs.upload_url }}
+          asset_path: ./build/PinStick.app.zip
+          asset_name: PinStick.app.zip
+          asset_content_type: application/zip

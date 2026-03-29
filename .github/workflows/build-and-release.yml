@@ -1,0 +1,123 @@
+name: Build & Release macOS App
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**.swift'
+      - '**.png'
+      - 'Contents.json'
+      - 'Jot.xcodeproj.zip'
+      - '.github/workflows/build-and-release.yml'
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: 'Create as draft (for testing)'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.extract.outputs.version }}
+      tag_exists: ${{ steps.check_tag.outputs.exists }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Extract version from Xcode project
+        id: extract
+        run: |
+          unzip -o Jot.xcodeproj.zip -d .
+          VERSION=$(grep -m1 'MARKETING_VERSION = ' Jot.xcodeproj/project.pbxproj | awk -F ' = ' '{ gsub(/;/,"",$2); print $2; exit }')
+          echo "version=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: v$VERSION"
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git ls-remote --tags --exit-code origin "refs/tags/${{ steps.extract.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Tag already exists!"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Tag does not exist - ready to build"
+          fi
+
+  build-and-release:
+    needs: check-version
+    if: needs.check-version.outputs.tag_exists == 'false'
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build macOS App
+        run: |
+          unzip -o Jot.xcodeproj.zip -d .
+          mkdir -p build
+
+          xcodebuild build \
+            -project Jot.xcodeproj \
+            -target Jot \
+            -configuration Release \
+            -skipPackagePluginValidation \
+            SYMROOT=build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ALLOWED=NO
+
+          APP_PATH=$(find build -name "Jot.app" -type d | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "❌ Jot.app not found"
+            exit 1
+          fi
+
+          OUT_ZIP="$(pwd)/build/PinStick.app.zip"
+          APP_DIR="$(dirname "$APP_PATH")"
+          APP_NAME="$(basename "$APP_PATH")"
+          ( cd "$APP_DIR" && zip -r "$OUT_ZIP" "$APP_NAME" )
+          echo "✅ macOS build succeeded"
+
+      - name: Create Git Tag
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          VERSION="${{ needs.check-version.outputs.version }}"
+          git tag "$VERSION" 2>/dev/null || echo "Local tag $VERSION already exists, proceeding with push"
+          if ! git push origin "$VERSION"; then
+            echo "::error::Tag $VERSION already exists on remote. A release for this version may already exist."
+            exit 1
+          fi
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        id: create_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.check-version.outputs.version }}
+          release_name: "PinStick ${{ needs.check-version.outputs.version }}"
+          draft: ${{ github.event.inputs.draft == 'true' }}
+          prerelease: false
+
+      - name: Upload macOS App
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build/PinStick.app.zip
+          asset_name: PinStick.app.zip
+          asset_content_type: application/zip
