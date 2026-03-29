@@ -14,6 +14,7 @@ struct PinStore(Mutex<bool>);
 
 #[tauri::command]
 fn toggle_pin(window: tauri::Window, store: State<PinStore>) -> Result<PinState, String> {
+    // Recover from a poisoned mutex by taking the inner value; safe because we only store a bool with no invariants.
     let mut pinned = store.0.lock().unwrap_or_else(|e| e.into_inner());
 
     let next = !*pinned;

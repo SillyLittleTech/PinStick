@@ -10,7 +10,12 @@ function setStatus(message) {
 }
 
 function loadNote() {
-  const saved = localStorage.getItem("pinstick-note") ?? "";
+  let saved = "";
+  try {
+    saved = localStorage.getItem("pinstick-note") ?? "";
+  } catch (err) {
+    console.warn("Unable to read saved note:", err);
+  }
   noteEl.value = saved;
   setEdited(saved.length > 0);
 }
@@ -30,7 +35,7 @@ async function togglePin() {
   setStatus("Toggling pin…");
   try {
     const result = await invoke("toggle_pin");
-    const pinned = !!result?.pinned;
+    const pinned = result?.pinned ?? false;
     pinBtn.textContent = pinned ? "Unpin" : "Pin";
     setStatus(pinned ? "Pinned on top" : "Not pinned");
   } catch (err) {
