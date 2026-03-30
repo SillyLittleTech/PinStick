@@ -1,0 +1,184 @@
+name: Build & Release macOS App
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'cross-platform/**'
+      - '.github/workflows/build-and-release.yml'
+  workflow_dispatch:
+
+jobs:
+  cross-platform-build:
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      # Pin runner images for reproducibility; update only after verifying builds.
+      matrix:
+        os: [ubuntu-22.04, windows-2022, macos-14]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Export app version
+        shell: bash
+        run: |
+          printf "APP_VERSION=%s\n" "$(node -p "require('./cross-platform/package.json').version")" >> "$GITHUB_ENV"
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            libjavascriptcoregtk-4.0-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libsoup2.4-dev \
+            build-essential \
+            curl \
+            wget \
+            libssl-dev \
+            patchelf \
+            pkg-config
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install JS dependencies
+        working-directory: cross-platform
+        run: npm ci
+
+      - name: Generate Tauri icons
+        working-directory: cross-platform
+        run: npx tauri icon ../JotIcon-iOS-Default-1024x1024@1x.png
+
+      - name: Build cross-platform app
+        working-directory: cross-platform
+        shell: bash
+        run: |
+          case "${{ matrix.os }}" in
+            windows-2022)
+              npx tauri build --bundles nsis,msi --verbose
+              ;;
+            ubuntu-22.04)
+              npx tauri build --bundles appimage --verbose
+              ;;
+            macos-14)
+              npx tauri build --bundles app --verbose
+              ;;
+            *)
+              echo "Unsupported runner: ${{ matrix.os }}"
+              exit 1
+              ;;
+          esac
+
+      - name: Package macOS app bundle
+        if: matrix.os == 'macos-14'
+        run: |
+          APP_PATH="cross-platform/src-tauri/target/release/bundle/macos/PinStick.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "Missing macOS app at $APP_PATH"
+            exit 1
+          fi
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "PinStick-${APP_VERSION}-macOS.app.zip"
+
+      - name: Collect Windows installer
+        if: matrix.os == 'windows-2022'
+        shell: bash
+        run: |
+          shopt -s nullglob globstar
+          release_dir="cross-platform/src-tauri/target/release"
+          bundle_dir="$release_dir/bundle"
+          msi_candidates=(
+            "$bundle_dir"/**/*.msi
+          )
+          portable_candidates=(
+            "$release_dir"/*.exe
+          )
+          artifact_dir="PinStick-${APP_VERSION}-windows"
+          mkdir -p "$artifact_dir"
+          if [ ${#msi_candidates[@]} -eq 0 ] || [ ${#portable_candidates[@]} -eq 0 ]; then
+            echo "Expected MSI installer under $bundle_dir and portable EXE under $release_dir"
+            if [ -d "$release_dir" ]; then
+              find "$release_dir" -maxdepth 4 -type f | sort
+            else
+              echo "Release directory missing: $release_dir"
+            fi
+            exit 1
+          fi
+          cp "${msi_candidates[0]}" "$artifact_dir/PinStick-install.msi"
+          cp "${portable_candidates[0]}" "$artifact_dir/PinStick-portable.exe"
+          printf "WINDOWS_ARTIFACT_DIR=%s\n" "$artifact_dir" >> "$GITHUB_ENV"
+
+      - name: Collect Linux AppImage
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          shopt -s nullglob
+          src=(cross-platform/src-tauri/target/release/bundle/appimage/*.AppImage)
+          if [ ${#src[@]} -eq 0 ]; then
+            echo "No AppImage found"
+            exit 1
+          fi
+          cp "${src[0]}" "PinStick-${APP_VERSION}-linux.AppImage"
+
+      - name: Upload macOS artifact
+        if: matrix.os == 'macos-14'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PinStick-macos
+          path: PinStick-${{ env.APP_VERSION }}-macOS.app.zip
+          if-no-files-found: error
+
+      - name: Upload Windows artifact
+        if: matrix.os == 'windows-2022'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PinStick-windows
+          path: ${{ env.WINDOWS_ARTIFACT_DIR }}
+          if-no-files-found: error
+
+      - name: Upload Linux artifact
+        if: matrix.os == 'ubuntu-22.04'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PinStick-linux
+          path: PinStick-${{ env.APP_VERSION }}-linux.AppImage
+          if-no-files-found: error
+
+  release:
+    needs: cross-platform-build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Export app version
+        shell: bash
+        run: |
+          printf "APP_VERSION=%s\n" "$(node -p "require('./cross-platform/package.json').version")" >> "$GITHUB_ENV"
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ env.APP_VERSION }}
+          name: "PinStick v${{ env.APP_VERSION }}"
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/PinStick-macos/*
+            artifacts/PinStick-windows/*
+            artifacts/PinStick-linux/*
