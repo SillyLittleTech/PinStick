@@ -7,7 +7,7 @@ title: PinStick — Pin notes where you need them
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="PinStick keeps your notes on top — a lightweight macOS notepad with a cross-platform preview in Tauri.">
+  <meta name="description" content="PinStick keeps your notes on top — a lightweight macOS notepad for quick thoughts and reminders.">
   <title>PinStick</title>
   <style>
     :root {
@@ -184,12 +184,6 @@ title: PinStick — Pin notes where you need them
       top: 0;
       font-size: 18px;
     }
-    footer {
-      margin-top: 40px;
-      text-align: center;
-      color: #5c5143;
-      font-size: 14px;
-    }
     .inline-note {
       display: inline-block;
       background: #fff7d9;
@@ -197,6 +191,31 @@ title: PinStick — Pin notes where you need them
       padding: 6px 10px;
       border-radius: 8px;
       box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+    }
+    .site-footer {
+      margin-top: 56px;
+      background: #111;
+      color: #a7a7a7;
+      padding: 36px 20px 42px;
+      text-align: center;
+      border-radius: 14px;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.22);
+    }
+    .site-footer a {
+      color: #9b7cf5;
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .site-footer .line {
+      margin: 0 0 10px;
+      font-size: 18px;
+      color: #d5d5d5;
+    }
+    .site-footer .legal {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.5;
+      color: #a7a7a7;
     }
   </style>
 </head>
@@ -207,8 +226,7 @@ title: PinStick — Pin notes where you need them
         <span class="tag">PinStick • macOS</span>
         <h1>Pin your notes and keep them on top.</h1>
         <p class="subtitle">
-          A lightweight SwiftUI notepad that stays visible while you work. Jot quick thoughts, pin the window above everything else, and keep track of the details that matter.
-          A cross-platform Tauri preview lives on the separate <span class="inline-note">cross-platform-dev</span> branch (not on main) if you want to try Windows or Linux builds.
+          A lightweight notepad that stays visible while you work. Jot quick thoughts, pin the window above everything else, and keep track of the little details that matter.
         </p>
         <div class="cta">
           <a class="primary" href="https://github.com/SillyLittleTech/PinStick/releases">View releases</a>
@@ -221,7 +239,7 @@ title: PinStick — Pin notes where you need them
           <li>Always-on-top pinning keeps key notes in sight.</li>
           <li>Simple, local storage — your notes stay on your machine.</li>
           <li>Keyboard-friendly quick edits, instant save.</li>
-          <li>Cross-platform preview powered by Tauri for Windows &amp; Linux.</li>
+          <li>Coming to more platforms soon; a preview is brewing for Windows &amp; Linux.</li>
         </ul>
       </div>
     </header>
@@ -241,24 +259,23 @@ title: PinStick — Pin notes where you need them
         <p>Your text lives locally. No accounts, no telemetry — just a focused scratchpad that saves as you type.</p>
       </div>
       <div class="card">
-        <h3>Cross-Platform Preview</h3>
-        <p>The repository includes a Tauri preview so you can test PinStick on Windows and Linux with the same pin-to-front flow.</p>
+        <h3>Made to stay visible</h3>
+        <p>Float your notes on top while you jump between apps, so timers, to-dos, or meeting points never get buried.</p>
       </div>
     </div>
 
     <h2 class="section-title">Get started</h2>
     <div class="note" style="margin-top: 6px;">
       <ul class="list" style="margin-top: 4px; gap: 10px;">
-        <li><strong>macOS quick start:</strong> Grab the latest release, unzip, and run.</li>
-        <li><strong>Cross-platform preview:</strong> Switch to the <span class="inline-note">cross-platform-dev</span> branch; the <span class="inline-note">cross-platform/</span> directory at the repo root (with <span class="inline-note">src-tauri/</span> and <span class="inline-note">src/</span>) holds the Tauri project.</li>
-        <li><strong>Tauri build commands (on cross-platform-dev):</strong> Install deps with <span class="inline-note">npm install</span>, then run <span class="inline-note">npm run tauri dev</span> (or <span class="inline-note">npm run tauri build</span>).</li>
-        <li><strong>On main:</strong> Only the macOS app ships here; the Tauri preview lives exclusively on <span class="inline-note">cross-platform-dev</span>.</li>
+        <li><strong>macOS:</strong> Download the latest release, unzip, and pin your first note in seconds.</li>
+        <li><strong>Windows &amp; Linux (preview):</strong> Early builds live on the <span class="inline-note">cross-platform-dev</span> branch for testers.</li>
       </ul>
     </div>
 
-    <footer>
-      Built with SwiftUI and a little corkboard inspiration. Pins up, thoughts out. ✏️
-    </footer>
+    <div class="site-footer">
+      <p class="line">A project by <a href="https://github.com/SillyLittleTech">SillyLittleTech</a></p>
+      <p class="legal">© 2026 Kiya Rose. Fiscally sponsored by The Hack Foundation (d.b.a. Hack Club), a 501(c)(3) nonprofit (EIN: 81-2908499). Licensed under BSD-2-Clause.</p>
+    </div>
   </div>
 </body>
 </html>
