@@ -14,7 +14,8 @@
       "active": true,
       "identifier": "slf.pinstick",
       "icon": [
-        "icons/icon.png"
+        "icons/icon.png",
+        "icons/icon.ico"
       ]
     },
     "windows": [
