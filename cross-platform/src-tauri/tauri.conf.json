@@ -11,9 +11,15 @@
     "version": "2.5.8"
   },
   "tauri": {
+    "security": {
+      "csp": "default-src 'self' tauri: asset: data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: data: blob:"
+    },
     "bundle": {
       "active": true,
       "identifier": "slf.pinstick",
+      "macOS": {
+        "signingIdentity": "-"
+      },
       "icon": [
         "icons/icon.png",
         "icons/icon.ico"

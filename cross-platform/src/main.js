@@ -3,7 +3,7 @@ const statusEl = document.getElementById("status");
 const noteEl = document.getElementById("note");
 
 const TAURI = window.__TAURI__;
-const invoke = TAURI?.tauri?.invoke;
+const invoke = TAURI && TAURI.tauri ? TAURI.tauri.invoke : null;
 
 function setStatus(message) {
   statusEl.textContent = message;
