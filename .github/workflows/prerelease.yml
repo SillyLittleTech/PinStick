@@ -104,34 +104,25 @@ jobs:
           shopt -s nullglob globstar
           release_dir="cross-platform/src-tauri/target/release"
           bundle_dir="$release_dir/bundle"
-          installer_candidates=(
+          msi_candidates=(
             "$bundle_dir"/**/*.msi
-            "$bundle_dir"/**/*.exe
+          )
+          portable_candidates=(
+            "$release_dir"/*.exe
           )
           artifact_dir="PinStick-${APP_VERSION}-windows"
           mkdir -p "$artifact_dir"
-          if [ ${#installer_candidates[@]} -gt 0 ]; then
-            for installer_path in "${installer_candidates[@]}"; do
-              cp "$installer_path" "$artifact_dir/"
-            done
-          else
-            echo "No installers found under $bundle_dir; printing release directory for debugging."
+          if [ ${#msi_candidates[@]} -eq 0 ] || [ ${#portable_candidates[@]} -eq 0 ]; then
+            echo "Expected MSI installer under $bundle_dir and portable EXE under $release_dir"
             if [ -d "$release_dir" ]; then
               find "$release_dir" -maxdepth 4 -type f | sort
             else
               echo "Release directory missing: $release_dir"
             fi
-            portable_candidates=(
-              "$release_dir"/*.exe
-            )
-            if [ ${#portable_candidates[@]} -eq 0 ]; then
-              echo "No Windows installer or portable .exe artifacts found under $release_dir"
-              exit 1
-            fi
-            for portable_path in "${portable_candidates[@]}"; do
-              cp "$portable_path" "$artifact_dir/"
-            done
+            exit 1
           fi
+          cp "${msi_candidates[0]}" "$artifact_dir/PinStick-install.msi"
+          cp "${portable_candidates[0]}" "$artifact_dir/PinStick-portable.exe"
           printf "WINDOWS_ARTIFACT_DIR=%s\n" "$artifact_dir" >> "$GITHUB_ENV"
 
       - name: Collect Linux AppImage
