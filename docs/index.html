@@ -1,0 +1,260 @@
+---
+layout: null
+title: PinStick — Pin notes where you need them
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="PinStick keeps your notes on top — a lightweight macOS notepad with a cross-platform preview in Tauri.">
+  <title>PinStick</title>
+  <style>
+    :root {
+      color-scheme: light;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at 20% 20%, #f5ede2 0%, #f1e5d7 25%, #ebdccd 60%, #e6d3c0 100%);
+      color: #2f2a28;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    .page {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 48px 20px 64px;
+    }
+    header {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      align-items: center;
+      margin-bottom: 32px;
+    }
+    .note {
+      position: relative;
+      background: #fffdf6;
+      border: 1px solid #e1d7c5;
+      border-radius: 14px;
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255,255,255,0.8) inset;
+      padding: 28px 24px 24px;
+      background-image:
+        linear-gradient(#e8dfcf 1px, transparent 1px),
+        linear-gradient(90deg, rgba(246, 231, 210, 0.5) 1px, transparent 1px);
+      background-size: 100% 32px, 24px 100%;
+      background-position: 0 14px, 14px 0;
+      overflow: hidden;
+    }
+    .note::before,
+    .note::after {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      top: 10px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #ffe2e2, #ff7b7b 45%, #b53232 90%);
+      box-shadow: 0 8px 12px rgba(0,0,0,0.18);
+    }
+    .note::before { left: 16px; }
+    .note::after { right: 16px; }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #f3e3bf;
+      color: #7a4c00;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      font-size: 12px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+    }
+    h1 {
+      margin: 12px 0 8px;
+      font-size: clamp(28px, 4vw, 38px);
+      line-height: 1.15;
+      color: #1f1b19;
+    }
+    .subtitle {
+      margin: 0;
+      font-size: 16px;
+      max-width: 640px;
+    }
+    .cta {
+      margin-top: 18px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .cta a {
+      text-decoration: none;
+      font-weight: 700;
+      padding: 12px 18px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      box-shadow: 0 8px 14px rgba(0,0,0,0.12);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    }
+    .cta a.primary {
+      background: linear-gradient(135deg, #ffba6b, #ff8c42);
+      color: #2b1504;
+      border-color: #ff9f47;
+    }
+    .cta a.secondary {
+      background: #fff9ef;
+      color: #5a4a2c;
+      border-color: #e5d6bb;
+    }
+    .cta a:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 20px rgba(0,0,0,0.14);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+      margin-top: 10px;
+    }
+    .card {
+      position: relative;
+      background: #fffef8;
+      border: 1px solid #e4d9c9;
+      border-radius: 12px;
+      padding: 18px 16px 20px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+      background-image: linear-gradient(#efe4d4 1px, transparent 1px);
+      background-size: 100% 28px;
+      background-position: 0 12px;
+      overflow: hidden;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: radial-gradient(circle at 30% 30%, #ffe8a3, #f6a000 70%, #c66d00 100%);
+      border-radius: 50%;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      box-shadow: 0 7px 12px rgba(0,0,0,0.14);
+    }
+    .card h3 {
+      margin: 10px 0 6px;
+      font-size: 18px;
+      color: #2a241c;
+    }
+    .card p {
+      margin: 0;
+      font-size: 14px;
+      color: #3b352f;
+    }
+    .section-title {
+      margin: 36px 0 12px;
+      font-size: 20px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: #70592e;
+    }
+    .list {
+      list-style: none;
+      padding: 0;
+      margin: 10px 0 0;
+      display: grid;
+      gap: 12px;
+    }
+    .list li {
+      position: relative;
+      padding-left: 28px;
+      font-weight: 600;
+      color: #2d261e;
+    }
+    .list li::before {
+      content: "📌";
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-size: 18px;
+    }
+    footer {
+      margin-top: 40px;
+      text-align: center;
+      color: #5c5143;
+      font-size: 14px;
+    }
+    .inline-note {
+      display: inline-block;
+      background: #fff7d9;
+      border: 1px dashed #d6c18a;
+      padding: 6px 10px;
+      border-radius: 8px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="note">
+        <span class="tag">PinStick • macOS</span>
+        <h1>Pin your notes and keep them on top.</h1>
+        <p class="subtitle">
+          A lightweight SwiftUI notepad that stays visible while you work. Jot quick thoughts, pin the window above everything else, and keep track of the details that matter. A Tauri preview in the repo brings the same experience to Windows and Linux.
+        </p>
+        <div class="cta">
+          <a class="primary" href="https://github.com/SillyLittleTech/PinStick/releases">Download latest build</a>
+          <a class="secondary" href="https://github.com/SillyLittleTech/PinStick">View on GitHub</a>
+        </div>
+      </div>
+      <div class="note">
+        <span class="tag">Why it sticks</span>
+        <ul class="list">
+          <li>Always-on-top pinning keeps key notes in sight.</li>
+          <li>Simple, local storage — your notes stay on your machine.</li>
+          <li>Keyboard-friendly quick edits, instant save.</li>
+          <li>Cross-platform preview powered by Tauri for Windows &amp; Linux.</li>
+        </ul>
+      </div>
+    </header>
+
+    <h2 class="section-title">Highlights</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Always on Top</h3>
+        <p>PinStick pins its window above everything else so timers, tasks, and reminders never hide behind other apps.</p>
+      </div>
+      <div class="card">
+        <h3>Fast &amp; Lightweight</h3>
+        <p>Built with SwiftUI for macOS. Launch, type, and move on — no setup, no clutter, tiny footprint.</p>
+      </div>
+      <div class="card">
+        <h3>Privacy First</h3>
+        <p>Your text lives locally. No accounts, no telemetry — just a focused scratchpad that saves as you type.</p>
+      </div>
+      <div class="card">
+        <h3>Cross-Platform Preview</h3>
+        <p>The repository includes a Tauri preview so you can test PinStick on Windows and Linux with the same pin-to-front flow.</p>
+      </div>
+    </div>
+
+    <h2 class="section-title">Get started</h2>
+    <div class="note" style="margin-top: 6px;">
+      <p class="subtitle" style="max-width: 760px;">
+        Download the latest macOS build from GitHub Releases, unzip, and run. Want to tinker? Clone the repo and check out the <span class="inline-note">cross-platform</span> folder for the Tauri preview — it ships with the same pin-and-jot behavior.
+      </p>
+    </div>
+
+    <footer>
+      Built with SwiftUI and a little corkboard inspiration. Pins up, thoughts out. ✏️
+    </footer>
+  </div>
+</body>
+</html>
