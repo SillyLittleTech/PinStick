@@ -73,13 +73,13 @@ jobs:
         run: |
           case "${{ matrix.os }}" in
             windows-2022)
-              npm run tauri -- build --bundles nsis,msi --verbose
+              npx tauri build --bundles nsis,msi --verbose
               ;;
             ubuntu-22.04)
-              npm run tauri -- build --bundles appimage --verbose
+              npx tauri build --bundles appimage --verbose
               ;;
             macos-14)
-              npm run tauri -- build --bundles app --verbose
+              npx tauri build --bundles app --verbose
               ;;
             *)
               echo "Unsupported runner: ${{ matrix.os }}"
