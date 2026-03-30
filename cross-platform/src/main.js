@@ -12,7 +12,8 @@ function setStatus(message) {
 function loadNote() {
   let saved = "";
   try {
-    saved = localStorage.getItem("pinstick-note") ?? "";
+    const stored = localStorage.getItem("pinstick-note");
+    saved = stored === null ? "" : stored;
   } catch (err) {
     console.warn("Unable to read saved note:", err);
     setStatus("Failed to load note; starting empty");
@@ -36,7 +37,10 @@ async function togglePin() {
   setStatus("Toggling pin…");
   try {
     const result = await invoke("toggle_pin");
-    const pinned = result?.pinned ?? false;
+    const pinned =
+      result && Object.prototype.hasOwnProperty.call(result, "pinned")
+        ? result.pinned
+        : false;
     pinBtn.textContent = pinned ? "Unpin" : "Pin";
     setStatus(pinned ? "Pinned on top" : "Not pinned");
   } catch (err) {
