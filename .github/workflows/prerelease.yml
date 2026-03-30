@@ -71,18 +71,18 @@ jobs:
         working-directory: cross-platform
         shell: bash
         run: |
-          case "${{ matrix.os }}" in
-            windows-2022)
-              npx tauri build --bundles nsis,msi --verbose
+          case "${{ runner.os }}" in
+            Windows)
+              npm run tauri -- build --bundles nsis,msi --verbose
               ;;
-            ubuntu-22.04)
-              npx tauri build --bundles appimage --verbose
+            Linux)
+              npm run tauri -- build --bundles appimage --verbose
               ;;
-            macos-14)
-              npx tauri build --bundles app --verbose
+            macOS)
+              npm run tauri -- build --bundles app --verbose
               ;;
             *)
-              echo "Unsupported runner: ${{ matrix.os }}"
+              echo "Unsupported runner OS: ${{ runner.os }}"
               exit 1
               ;;
           esac
