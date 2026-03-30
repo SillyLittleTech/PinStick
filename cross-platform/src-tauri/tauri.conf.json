@@ -2,6 +2,7 @@
   "build": {
     "beforeBuildCommand": "",
     "beforeDevCommand": "",
+    "withGlobalTauri": true,
     "devPath": "../src",
     "distDir": "../src"
   },
@@ -14,7 +15,8 @@
       "active": true,
       "identifier": "slf.pinstick",
       "icon": [
-        "icons/icon.png"
+        "icons/icon.png",
+        "icons/icon.ico"
       ]
     },
     "windows": [
