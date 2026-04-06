@@ -16,28 +16,39 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px;
+  padding: 3px 8px;
   background: #ffffff;
   border-bottom: 1px solid #e0e0e0;
 }
 
 header button {
-  padding: 6px 12px;
+  padding: 2px 6px;
   font-size: 14px;
-  border: 1px solid #ccc;
-  background: #fff;
-  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 5px;
   cursor: pointer;
+  line-height: 1.4;
+  transition: background 0.15s;
+}
+
+header button:hover {
+  background: rgba(0, 0, 0, 0.07);
+}
+
+header button.pinned {
+  background: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.15);
 }
 
 header button:disabled {
-  opacity: 0.6;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 main {
   flex: 1;
-  padding: 10px;
+  padding: 8px;
 }
 
 textarea {
@@ -50,9 +61,41 @@ textarea {
   border: 1px solid #d0d0d0;
   border-radius: 8px;
   background: #ffffff;
+  color: #222;
 }
 
 #status {
-  font-size: 12px;
-  color: #555;
+  font-size: 11px;
+  color: #666;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #1e1e1e;
+    color: #e0e0e0;
+  }
+
+  header {
+    background: #2a2a2a;
+    border-bottom-color: #3a3a3a;
+  }
+
+  header button:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  header button.pinned {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  textarea {
+    background: #2a2a2a;
+    color: #e0e0e0;
+    border-color: #3a3a3a;
+  }
+
+  #status {
+    color: #888;
+  }
 }

@@ -41,7 +41,9 @@ async function togglePin() {
       result && Object.prototype.hasOwnProperty.call(result, "pinned")
         ? result.pinned
         : false;
-    pinBtn.textContent = pinned ? "Unpin" : "Pin";
+    pinBtn.classList.toggle("pinned", pinned);
+    pinBtn.title = pinned ? "Unpin window" : "Pin window";
+    pinBtn.setAttribute("aria-label", pinned ? "Unpin window" : "Pin window");
     setStatus(pinned ? "Pinned on top" : "Not pinned");
   } catch (err) {
     console.error(err);
@@ -56,6 +58,13 @@ function init() {
   if (!invoke) {
     pinBtn.disabled = true;
     setStatus("Tauri API unavailable");
+  } else if (TAURI && TAURI.app) {
+    // Briefly show the app version so users can verify which build is running
+    TAURI.app.getVersion().then((version) => {
+      const previous = statusEl.textContent;
+      setStatus(`v${version}`);
+      setTimeout(() => setStatus(previous), 2000);
+    }).catch(() => { /* non-critical */ });
   }
 
   noteEl.addEventListener("input", (e) => {
