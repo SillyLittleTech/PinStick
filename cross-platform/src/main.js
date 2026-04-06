@@ -168,9 +168,11 @@ function init() {
   // closes; use closeApproved so our own appWindow.close() call is never
   // re-intercepted, avoiding the unlisten race condition.
   if (TAURI && TAURI.window && TAURI.window.appWindow) {
-    let unlistenCloseRequested = null;
+    let shouldBypassClosePrompt = false;
 
-    const closeSubscription = TAURI.window.appWindow.onCloseRequested(async (event) => {
+    TAURI.window.appWindow.onCloseRequested(async (event) => {
+      if (shouldBypassClosePrompt) return;
+
       const hasData = noteEl.value.length > 0;
       if (!hasData) return;
 
@@ -185,12 +187,10 @@ function init() {
           setEdited(false);
         }
 
-        if (typeof unlistenCloseRequested === "function") {
-          unlistenCloseRequested();
-          unlistenCloseRequested = null;
-        }
+        shouldBypassClosePrompt = true;
         await TAURI.window.appWindow.close();
       } catch (err) {
+        shouldBypassClosePrompt = false;
         console.error("Close handler error:", err);
       }
     });
