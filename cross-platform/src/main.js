@@ -33,40 +33,6 @@ function saveNote(value) {
 
 let isCloseDialogOpen = false;
 
-async function closeApplication() {
-  let exitError = null;
-
-  if (TAURI && TAURI.process && typeof TAURI.process.exit === "function") {
-    try {
-      await TAURI.process.exit(0);
-      return;
-    } catch (err) {
-      exitError = err;
-      console.warn("TAURI.process.exit(0) failed; falling back to appWindow.close():", err);
-    }
-  }
-
-  if (TAURI && TAURI.window && TAURI.window.appWindow) {
-    try {
-      await TAURI.window.appWindow.close();
-      return;
-    } catch (err) {
-      console.error("TAURI.window.appWindow.close() failed:", err);
-      throw new Error(
-        exitError
-          ? "Unable to close application after TAURI.process.exit(0) and appWindow.close() both failed."
-          : "Unable to close application with appWindow.close()."
-      );
-    }
-  }
-
-  throw new Error(
-    exitError
-      ? "TAURI.process.exit(0) failed and no appWindow.close() fallback is available."
-      : "No supported application close mechanism is available."
-  );
-}
-
 function showCloseDialog() {
   isCloseDialogOpen = true;
 
@@ -165,19 +131,28 @@ function init() {
 
   // Prompt the user about their saved notes when they close the window.
   // Always call event.preventDefault() so we fully control when the window
-  // closes; use closeApproved so our own appWindow.close() call is never
-  // re-intercepted, avoiding the unlisten race condition.
+  // closes. closeApproved must be checked BEFORE event.preventDefault() so
+  // that our own appWindow.close() call passes through without re-intercepting.
   if (TAURI && TAURI.window && TAURI.window.appWindow) {
-    let shouldBypassClosePrompt = false;
+    let closeApproved = false;
 
     TAURI.window.appWindow.onCloseRequested(async (event) => {
-      if (shouldBypassClosePrompt) return;
+      // We triggered this close — let Tauri proceed without interference.
+      if (closeApproved) return;
+
+      // Intercept every other close so we control exactly when it happens.
+      event.preventDefault();
+
+      // Dialog already visible; a second close attempt does nothing.
+      if (isCloseDialogOpen) return;
 
       const hasData = noteEl.value.length > 0;
-      if (!hasData) return;
-
-      event.preventDefault();
-      if (isCloseDialogOpen) return;
+      if (!hasData) {
+        // Nothing to ask about; close immediately.
+        closeApproved = true;
+        TAURI.window.appWindow.close();
+        return;
+      }
 
       try {
         const keepData = await showCloseDialog();
@@ -186,24 +161,14 @@ function init() {
           noteEl.value = "";
           setEdited(false);
         }
-
-        shouldBypassClosePrompt = true;
-        await TAURI.window.appWindow.close();
       } catch (err) {
-        shouldBypassClosePrompt = false;
         console.error("Close handler error:", err);
       }
-    });
 
-    if (closeSubscription && typeof closeSubscription.then === "function") {
-      closeSubscription.then((unlisten) => {
-        unlistenCloseRequested = unlisten;
-      }).catch((err) => {
-        console.error("Failed to subscribe to close requests:", err);
-      });
-    } else if (typeof closeSubscription === "function") {
-      unlistenCloseRequested = closeSubscription;
-    }
+      // Always close after the dialog resolves, regardless of user choice.
+      closeApproved = true;
+      TAURI.window.appWindow.close();
+    });
   }
 }
 
