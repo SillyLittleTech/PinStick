@@ -41,15 +41,15 @@ function showCloseDialog() {
 
     function cleanup(value) {
       overlay.hidden = true;
-      yeaBtn.removeEventListener("click", onYea);
-      nahBtn.removeEventListener("click", onNah);
+      yeaBtn.removeEventListener("click", onConfirm);
+      nahBtn.removeEventListener("click", onCancel);
       resolve(value);
     }
-    function onYea() { cleanup(true); }
-    function onNah() { cleanup(false); }
+    function onConfirm() { cleanup(true); }
+    function onCancel() { cleanup(false); }
 
-    yeaBtn.addEventListener("click", onYea);
-    nahBtn.addEventListener("click", onNah);
+    yeaBtn.addEventListener("click", onConfirm);
+    nahBtn.addEventListener("click", onCancel);
   });
 }
 
@@ -104,7 +104,7 @@ function init() {
     let handlingClose = false;
     TAURI.window.appWindow.onCloseRequested(async (event) => {
       if (handlingClose) return; // second close call — let it proceed
-      const hasData = (noteEl.value || "").length > 0;
+      const hasData = noteEl.value.length > 0;
       if (!hasData) return; // nothing saved; close immediately
 
       event.preventDefault();
