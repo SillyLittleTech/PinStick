@@ -82,9 +82,11 @@ struct ContentView: View {
                 Button(action: togglePin) {
                     Image(systemName: isPinned ? "pin.slash" : "pin")
                         .help(isPinned ? "Unpin Window" : "Pin Window")
+                        .font(.system(size: 12))
                 }
                 .buttonStyle(PlainButtonStyle())
-                .padding(6)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
 
                 Spacer()
             }
@@ -95,7 +97,6 @@ struct ContentView: View {
             TextEditor(text: $text)
                 .padding(8)
                 .font(.system(size: 16, design: .monospaced))
-                .background(Color.white)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onChange(of: text) { oldValue, newValue in

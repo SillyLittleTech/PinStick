@@ -41,7 +41,9 @@ async function togglePin() {
       result && Object.prototype.hasOwnProperty.call(result, "pinned")
         ? result.pinned
         : false;
-    pinBtn.textContent = pinned ? "Unpin" : "Pin";
+    pinBtn.classList.toggle("pinned", pinned);
+    pinBtn.title = pinned ? "Unpin window" : "Pin window";
+    pinBtn.setAttribute("aria-label", pinned ? "Unpin window" : "Pin window");
     setStatus(pinned ? "Pinned on top" : "Not pinned");
   } catch (err) {
     console.error(err);
