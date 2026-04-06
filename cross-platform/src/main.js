@@ -74,6 +74,34 @@ function init() {
   });
 
   pinBtn.addEventListener("click", togglePin);
+
+  // Prompt the user about their saved notes when they close the window.
+  // handlingClose prevents re-entering the handler when appWindow.close() is
+  // called programmatically after the user makes their choice.
+  if (TAURI && TAURI.window && TAURI.window.appWindow) {
+    let handlingClose = false;
+    TAURI.window.appWindow.onCloseRequested(async (event) => {
+      if (handlingClose) return; // second close call — let it proceed
+      const hasData = (localStorage.getItem("pinstick-note") || "").length > 0;
+      if (!hasData) return; // nothing saved; close immediately
+
+      event.preventDefault();
+      try {
+        const shouldDelete = await TAURI.dialog.ask(
+          "You have saved notes. Delete them before closing?",
+          { title: "Close PinStick", okLabel: "Delete & Close", cancelLabel: "Keep & Close" }
+        );
+        handlingClose = true;
+        if (shouldDelete) {
+          localStorage.removeItem("pinstick-note");
+        }
+        await TAURI.window.appWindow.close();
+      } catch (err) {
+        console.error("Close handler error:", err);
+        handlingClose = false;
+      }
+    });
+  }
 }
 
 document.addEventListener("DOMContentLoaded", init);

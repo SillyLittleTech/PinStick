@@ -27,17 +27,25 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         if sender.isDocumentEdited {
             let alert = NSAlert()
-            alert.messageText = "Do you want to quit the app?"
-            alert.informativeText = "Your notes will be lost if you don't save them elsewhere."
+            alert.messageText = "Close PinStick"
+            alert.informativeText = "What would you like to do with your saved notes?"
             alert.alertStyle = .warning
-            alert.addButton(withTitle: "Quit")
+            alert.addButton(withTitle: "Keep Notes")
+            alert.addButton(withTitle: "Delete Notes")
             alert.addButton(withTitle: "Cancel")
 
             let response = alert.runModal()
-            if response == .alertFirstButtonReturn {
+            switch response {
+            case .alertFirstButtonReturn: // Keep Notes — data stays in UserDefaults
                 NSApp.terminate(nil)
+                return false
+            case .alertSecondButtonReturn: // Delete Notes — shred saved data, then quit
+                UserDefaults.standard.removeObject(forKey: "pinstick-note")
+                NSApp.terminate(nil)
+                return false
+            default: // Cancel — abort the close
+                return false
             }
-            return false
         } else {
             NSApp.terminate(nil)
             return false
@@ -55,7 +63,8 @@ struct ContentViewWrapper: NSViewControllerRepresentable {
         let controller = NSHostingController(rootView: view)
         DispatchQueue.main.async {
             if let window = controller.view.window {
-                window.isDocumentEdited = false
+                let savedNote = UserDefaults.standard.string(forKey: "pinstick-note") ?? ""
+                window.isDocumentEdited = !savedNote.isEmpty
                 window.level = .normal // default level
             }
         }
@@ -66,13 +75,7 @@ struct ContentViewWrapper: NSViewControllerRepresentable {
 }
 
 struct ContentView: View {
-    @State private var text: String = "" {
-        didSet {
-            if let window = NSApplication.shared.windows.first {
-                window.isDocumentEdited = !text.isEmpty
-            }
-        }
-    }
+    @AppStorage("pinstick-note") private var text: String = ""
 
     @State private var isPinned: Bool = false
 
