@@ -170,7 +170,7 @@ function init() {
   if (TAURI && TAURI.window && TAURI.window.appWindow) {
     let unlistenCloseRequested = null;
 
-    TAURI.window.appWindow.onCloseRequested(async (event) => {
+    const closeSubscription = TAURI.window.appWindow.onCloseRequested(async (event) => {
       const hasData = noteEl.value.length > 0;
       if (!hasData) return;
 
@@ -193,13 +193,17 @@ function init() {
       } catch (err) {
         console.error("Close handler error:", err);
       }
-    }).then((unlisten) => {
-      unlistenCloseRequested = unlisten;
-    }).catch((err) => {
-      console.error("Failed to subscribe to close requests:", err);
-      closeApproved = true;
-      await closeApplication();
     });
+
+    if (closeSubscription && typeof closeSubscription.then === "function") {
+      closeSubscription.then((unlisten) => {
+        unlistenCloseRequested = unlisten;
+      }).catch((err) => {
+        console.error("Failed to subscribe to close requests:", err);
+      });
+    } else if (typeof closeSubscription === "function") {
+      unlistenCloseRequested = closeSubscription;
+    }
   }
 }
 
