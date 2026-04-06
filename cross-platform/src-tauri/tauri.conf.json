@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "PinStick",
-    "version": "2.6.5"
+    "version": "2.12.0"
   },
   "tauri": {
     "security": {
