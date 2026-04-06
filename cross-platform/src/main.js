@@ -33,6 +33,40 @@ function saveNote(value) {
 
 let isCloseDialogOpen = false;
 
+async function closeApplication() {
+  let exitError = null;
+
+  if (TAURI && TAURI.process && typeof TAURI.process.exit === "function") {
+    try {
+      await TAURI.process.exit(0);
+      return;
+    } catch (err) {
+      exitError = err;
+      console.warn("TAURI.process.exit(0) failed; falling back to appWindow.close():", err);
+    }
+  }
+
+  if (TAURI && TAURI.window && TAURI.window.appWindow) {
+    try {
+      await TAURI.window.appWindow.close();
+      return;
+    } catch (err) {
+      console.error("TAURI.window.appWindow.close() failed:", err);
+      throw new Error(
+        exitError
+          ? "Unable to close application after TAURI.process.exit(0) and appWindow.close() both failed."
+          : "Unable to close application with appWindow.close()."
+      );
+    }
+  }
+
+  throw new Error(
+    exitError
+      ? "TAURI.process.exit(0) failed and no appWindow.close() fallback is available."
+      : "No supported application close mechanism is available."
+  );
+}
+
 function showCloseDialog() {
   isCloseDialogOpen = true;
 
@@ -160,6 +194,16 @@ function init() {
         console.error("Close handler error:", err);
       }
     });
+
+    if (closeSubscription && typeof closeSubscription.then === "function") {
+      closeSubscription.then((unlisten) => {
+        unlistenCloseRequested = unlisten;
+      }).catch((err) => {
+        console.error("Failed to subscribe to close requests:", err);
+      });
+    } else if (typeof closeSubscription === "function") {
+      unlistenCloseRequested = closeSubscription;
+    }
   }
 }
 
