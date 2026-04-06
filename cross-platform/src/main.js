@@ -87,12 +87,12 @@ function init() {
 
       event.preventDefault();
       try {
-        const shouldDelete = await TAURI.dialog.ask(
-          "You have saved notes. Delete them before closing?",
-          { title: "Close PinStick", okLabel: "Delete & Close", cancelLabel: "Keep & Close" }
+        const isOkay = await TAURI.dialog.ask(
+          "Heads up! Your data will be cached to this app. Is that okay?",
+          { title: "Close PinStick", okLabel: "Yea", cancelLabel: "Nah" }
         );
         handlingClose = true;
-        if (shouldDelete) {
+        if (!isOkay) {
           localStorage.removeItem("pinstick-note");
         }
         await TAURI.window.appWindow.close();
