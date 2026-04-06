@@ -134,24 +134,16 @@ function init() {
   // closes; use closeApproved so our own appWindow.close() call is never
   // re-intercepted, avoiding the unlisten race condition.
   if (TAURI && TAURI.window && TAURI.window.appWindow) {
-    let closeApproved = false;
+    let shouldBypassClosePrompt = false;
+
     TAURI.window.appWindow.onCloseRequested(async (event) => {
-      // We triggered this close ourselves — let it through.
-      if (closeApproved) return;
-
-      // Always intercept so we control the exact moment the window closes.
-      event.preventDefault();
-
-      // Dialog is already visible; ignore re-entry.
-      if (isCloseDialogOpen) return;
+      if (shouldBypassClosePrompt) return;
 
       const hasData = noteEl.value.length > 0;
-      if (!hasData) {
-        // Nothing saved; close immediately without prompting.
-        closeApproved = true;
-        TAURI.window.appWindow.close();
-        return;
-      }
+      if (!hasData) return;
+
+      event.preventDefault();
+      if (isCloseDialogOpen) return;
 
       try {
         const keepData = await showCloseDialog();
@@ -160,11 +152,13 @@ function init() {
           noteEl.value = "";
           setEdited(false);
         }
+
+        shouldBypassClosePrompt = true;
+        await TAURI.window.appWindow.close();
       } catch (err) {
+        shouldBypassClosePrompt = false;
         console.error("Close handler error:", err);
       }
-      closeApproved = true;
-      TAURI.window.appWindow.close();
     });
   }
 }
