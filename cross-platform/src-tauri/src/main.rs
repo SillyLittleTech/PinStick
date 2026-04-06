@@ -28,15 +28,10 @@ fn toggle_pin(window: tauri::Window, store: State<PinStore>) -> Result<PinState,
     Ok(PinState { pinned: next })
 }
 
-#[tauri::command]
-fn exit_app(app: tauri::AppHandle) {
-    app.exit(0);
-}
-
 fn main() {
     tauri::Builder::default()
         .manage(PinStore(Mutex::new(false)))
-        .invoke_handler(tauri::generate_handler![toggle_pin, exit_app])
+        .invoke_handler(tauri::generate_handler![toggle_pin])
         .setup(|app| {
             if let Some(window) = app.get_window("main") {
                 window.set_title("PinStick")?;
