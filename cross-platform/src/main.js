@@ -31,6 +31,28 @@ function saveNote(value) {
   localStorage.setItem("pinstick-note", value);
 }
 
+function showCloseDialog() {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById("close-dialog");
+    const yeaBtn = document.getElementById("dialog-yea");
+    const nahBtn = document.getElementById("dialog-nah");
+    overlay.hidden = false;
+    yeaBtn.focus();
+
+    function cleanup(value) {
+      overlay.hidden = true;
+      yeaBtn.removeEventListener("click", onYea);
+      nahBtn.removeEventListener("click", onNah);
+      resolve(value);
+    }
+    function onYea() { cleanup(true); }
+    function onNah() { cleanup(false); }
+
+    yeaBtn.addEventListener("click", onYea);
+    nahBtn.addEventListener("click", onNah);
+  });
+}
+
 async function togglePin() {
   if (!invoke) return;
   pinBtn.disabled = true;
@@ -82,23 +104,20 @@ function init() {
     let handlingClose = false;
     TAURI.window.appWindow.onCloseRequested(async (event) => {
       if (handlingClose) return; // second close call — let it proceed
-      const hasData = (localStorage.getItem("pinstick-note") || "").length > 0;
+      const hasData = (noteEl.value || "").length > 0;
       if (!hasData) return; // nothing saved; close immediately
 
       event.preventDefault();
       try {
-        const isOkay = await TAURI.dialog.ask(
-          "Heads up! Your data will be cached to this app. Is that okay?",
-          { title: "Close PinStick", okLabel: "Yea", cancelLabel: "Nah" }
-        );
-        handlingClose = true;
+        const isOkay = await showCloseDialog();
         if (!isOkay) {
           localStorage.removeItem("pinstick-note");
         }
-        await TAURI.window.appWindow.close();
       } catch (err) {
         console.error("Close handler error:", err);
-        handlingClose = false;
+      } finally {
+        handlingClose = true;
+        await TAURI.window.appWindow.close();
       }
     });
   }

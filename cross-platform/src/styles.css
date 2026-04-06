@@ -69,6 +69,64 @@ textarea {
   color: #666;
 }
 
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.dialog-overlay[hidden] {
+  display: none;
+}
+
+.dialog-box {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 20px 24px 16px;
+  max-width: 280px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+  text-align: center;
+}
+
+.dialog-box p {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.dialog-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.dialog-buttons button {
+  padding: 6px 20px;
+  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid #d0d0d0;
+  background: #f0f0f0;
+}
+
+.dialog-buttons button:hover {
+  background: #e0e0e0;
+}
+
+#dialog-yea {
+  background: #007aff;
+  color: #ffffff;
+  border-color: #007aff;
+}
+
+#dialog-yea:hover {
+  background: #0066d6;
+}
+
 @media (prefers-color-scheme: dark) {
   body {
     background: #1e1e1e;
@@ -97,5 +155,30 @@ textarea {
 
   #status {
     color: #888;
+  }
+
+  .dialog-box {
+    background: #2a2a2a;
+    color: #e0e0e0;
+  }
+
+  .dialog-buttons button {
+    background: #3a3a3a;
+    border-color: #444;
+    color: #e0e0e0;
+  }
+
+  .dialog-buttons button:hover {
+    background: #444;
+  }
+
+  #dialog-yea {
+    background: #0a7aff;
+    color: #ffffff;
+    border-color: #0a7aff;
+  }
+
+  #dialog-yea:hover {
+    background: #0066d6;
   }
 }

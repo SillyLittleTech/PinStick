@@ -18,6 +18,15 @@
     <main>
       <textarea id="note" placeholder="Type your notes here..." autofocus></textarea>
     </main>
+    <div id="close-dialog" class="dialog-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="dialog-msg">
+      <div class="dialog-box">
+        <p id="dialog-msg">Heads up! Your data will be cached to this app. Is that okay?</p>
+        <div class="dialog-buttons">
+          <button id="dialog-yea" type="button">Yea</button>
+          <button id="dialog-nah" type="button">Nah</button>
+        </div>
+      </div>
+    </div>
     <script src="./main.js" defer></script>
   </body>
 </html>
