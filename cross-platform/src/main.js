@@ -34,7 +34,6 @@ function saveNote(value) {
 let isCloseDialogOpen = false;
 
 function showCloseDialog() {
-  if (isCloseDialogOpen) return Promise.resolve(null);
   isCloseDialogOpen = true;
 
   return new Promise((resolve) => {
@@ -42,6 +41,7 @@ function showCloseDialog() {
     const yeaBtn = document.getElementById("dialog-yea");
     const nahBtn = document.getElementById("dialog-nah");
     const focusable = [yeaBtn, nahBtn];
+    const previousFocus = document.activeElement;
 
     // Hide background content from assistive technologies while dialog is open
     document.querySelector("header").setAttribute("aria-hidden", "true");
@@ -58,12 +58,16 @@ function showCloseDialog() {
       nahBtn.removeEventListener("click", onCancel);
       overlay.removeEventListener("keydown", onKeyDown);
       isCloseDialogOpen = false;
+      if (previousFocus && typeof previousFocus.focus === "function") {
+        previousFocus.focus();
+      }
       resolve(value);
     }
     function onConfirm() { cleanup(true); }
     function onCancel() { cleanup(false); }
 
     function onKeyDown(e) {
+      if (e.key === "Escape") { cleanup(true); return; } // Escape = keep data (safe default; window closes either way)
       if (e.key !== "Tab") return;
       e.preventDefault();
       const current = document.activeElement;
@@ -126,33 +130,42 @@ function init() {
   pinBtn.addEventListener("click", togglePin);
 
   // Prompt the user about their saved notes when they close the window.
-  // Unlisten before calling appWindow.close() so the handler never blocks its
-  // own close call — avoids permanent lock-out if close() re-fires the event.
+  // Always call event.preventDefault() so we fully control when the window
+  // closes; use closeApproved so our own appWindow.close() call is never
+  // re-intercepted, avoiding the unlisten race condition.
   if (TAURI && TAURI.window && TAURI.window.appWindow) {
-    let unlistenClose;
+    let closeApproved = false;
     TAURI.window.appWindow.onCloseRequested(async (event) => {
-      const hasData = noteEl.value.length > 0;
-      if (!hasData) return; // nothing saved; close immediately
+      // We triggered this close ourselves — let it through.
+      if (closeApproved) return;
 
+      // Always intercept so we control the exact moment the window closes.
       event.preventDefault();
-      let shouldClose = false;
+
+      // Dialog is already visible; ignore re-entry.
+      if (isCloseDialogOpen) return;
+
+      const hasData = noteEl.value.length > 0;
+      if (!hasData) {
+        // Nothing saved; close immediately without prompting.
+        closeApproved = true;
+        TAURI.window.appWindow.close();
+        return;
+      }
+
       try {
-        const isOkay = await showCloseDialog();
-        if (isOkay === null) return; // dialog already open; ignore this close attempt
-        if (!isOkay) {
-          localStorage.removeItem("pinstick-note");
+        const keepData = await showCloseDialog();
+        if (!keepData) {
+          try { localStorage.removeItem("pinstick-note"); } catch (e) { console.warn("Failed to clear saved note:", e); }
+          noteEl.value = "";
+          setEdited(false);
         }
-        shouldClose = true;
       } catch (err) {
         console.error("Close handler error:", err);
-        shouldClose = true;
-      } finally {
-        if (shouldClose) {
-          if (unlistenClose) unlistenClose();
-          TAURI.window.appWindow.close();
-        }
       }
-    }).then((fn) => { unlistenClose = fn; });
+      closeApproved = true;
+      TAURI.window.appWindow.close();
+    });
   }
 }
 
