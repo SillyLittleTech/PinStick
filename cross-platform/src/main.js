@@ -31,25 +31,53 @@ function saveNote(value) {
   localStorage.setItem("pinstick-note", value);
 }
 
+let isCloseDialogOpen = false;
+
 function showCloseDialog() {
+  if (isCloseDialogOpen) return Promise.resolve(null);
+  isCloseDialogOpen = true;
+
   return new Promise((resolve) => {
     const overlay = document.getElementById("close-dialog");
     const yeaBtn = document.getElementById("dialog-yea");
     const nahBtn = document.getElementById("dialog-nah");
+    const focusable = [yeaBtn, nahBtn];
+
+    // Hide background content from assistive technologies while dialog is open
+    document.querySelector("header").setAttribute("aria-hidden", "true");
+    document.querySelector("main").setAttribute("aria-hidden", "true");
+
     overlay.hidden = false;
     yeaBtn.focus();
 
     function cleanup(value) {
       overlay.hidden = true;
+      document.querySelector("header").removeAttribute("aria-hidden");
+      document.querySelector("main").removeAttribute("aria-hidden");
       yeaBtn.removeEventListener("click", onConfirm);
       nahBtn.removeEventListener("click", onCancel);
+      overlay.removeEventListener("keydown", onKeyDown);
+      isCloseDialogOpen = false;
       resolve(value);
     }
     function onConfirm() { cleanup(true); }
     function onCancel() { cleanup(false); }
 
+    function onKeyDown(e) {
+      if (e.key !== "Tab") return;
+      e.preventDefault();
+      const current = document.activeElement;
+      const idx = focusable.indexOf(current);
+      const base = idx === -1 ? 0 : idx;
+      const next = e.shiftKey
+        ? focusable[(base - 1 + focusable.length) % focusable.length]
+        : focusable[(base + 1) % focusable.length];
+      next.focus();
+    }
+
     yeaBtn.addEventListener("click", onConfirm);
     nahBtn.addEventListener("click", onCancel);
+    overlay.addEventListener("keydown", onKeyDown);
   });
 }
 
@@ -107,16 +135,22 @@ function init() {
       if (!hasData) return; // nothing saved; close immediately
 
       event.preventDefault();
+      let shouldClose = false;
       try {
         const isOkay = await showCloseDialog();
+        if (isOkay === null) return; // dialog already open; ignore this close attempt
         if (!isOkay) {
           localStorage.removeItem("pinstick-note");
         }
+        shouldClose = true;
       } catch (err) {
         console.error("Close handler error:", err);
+        shouldClose = true;
       } finally {
-        if (unlistenClose) unlistenClose();
-        TAURI.window.appWindow.close();
+        if (shouldClose) {
+          if (unlistenClose) unlistenClose();
+          TAURI.window.appWindow.close();
+        }
       }
     }).then((fn) => { unlistenClose = fn; });
   }
