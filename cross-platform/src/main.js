@@ -58,6 +58,13 @@ function init() {
   if (!invoke) {
     pinBtn.disabled = true;
     setStatus("Tauri API unavailable");
+  } else if (TAURI && TAURI.app) {
+    // Briefly show the app version so users can verify which build is running
+    TAURI.app.getVersion().then((version) => {
+      const previous = statusEl.textContent;
+      setStatus(`v${version}`);
+      setTimeout(() => setStatus(previous), 2000);
+    }).catch(() => { /* non-critical */ });
   }
 
   noteEl.addEventListener("input", (e) => {
