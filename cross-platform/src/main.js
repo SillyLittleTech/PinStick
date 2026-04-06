@@ -98,12 +98,11 @@ function init() {
   pinBtn.addEventListener("click", togglePin);
 
   // Prompt the user about their saved notes when they close the window.
-  // handlingClose prevents re-entering the handler when appWindow.close() is
-  // called programmatically after the user makes their choice.
+  // Unlisten before calling appWindow.close() so the handler never blocks its
+  // own close call — avoids permanent lock-out if close() re-fires the event.
   if (TAURI && TAURI.window && TAURI.window.appWindow) {
-    let handlingClose = false;
+    let unlistenClose;
     TAURI.window.appWindow.onCloseRequested(async (event) => {
-      if (handlingClose) return; // second close call — let it proceed
       const hasData = noteEl.value.length > 0;
       if (!hasData) return; // nothing saved; close immediately
 
@@ -116,10 +115,10 @@ function init() {
       } catch (err) {
         console.error("Close handler error:", err);
       } finally {
-        handlingClose = true;
-        await TAURI.window.appWindow.close();
+        if (unlistenClose) unlistenClose();
+        TAURI.window.appWindow.close();
       }
-    });
+    }).then((fn) => { unlistenClose = fn; });
   }
 }
 
