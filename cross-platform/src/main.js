@@ -33,6 +33,19 @@ function saveNote(value) {
 
 let isCloseDialogOpen = false;
 
+async function closeApplication() {
+  if (invoke) {
+    await invoke("exit_app");
+    return;
+  }
+
+  if (TAURI && TAURI.window && TAURI.window.appWindow) {
+    setTimeout(() => {
+      TAURI.window.appWindow.close();
+    }, 0);
+  }
+}
+
 function showCloseDialog() {
   isCloseDialogOpen = true;
 
@@ -149,7 +162,7 @@ function init() {
       if (!hasData) {
         // Nothing saved; close immediately without prompting.
         closeApproved = true;
-        TAURI.window.appWindow.close();
+        await closeApplication();
         return;
       }
 
@@ -164,7 +177,7 @@ function init() {
         console.error("Close handler error:", err);
       }
       closeApproved = true;
-      TAURI.window.appWindow.close();
+      await closeApplication();
     });
   }
 }
