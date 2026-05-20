@@ -454,6 +454,8 @@ struct MediaEmbedView: View {
     let kind: MediaKind
     let url: URL
 
+    @State private var player: AVPlayer?
+
     var body: some View {
         Group {
             switch kind {
@@ -479,12 +481,23 @@ struct MediaEmbedView: View {
                     }
                 }
             case .video:
-                VideoPlayer(player: AVPlayer(url: url))
-                    .aspectRatio(16 / 9, contentMode: .fit)
+                if let player {
+                    VideoPlayer(player: player)
+                        .aspectRatio(16 / 9, contentMode: .fit)
+                }
             }
         }
         .frame(maxWidth: .infinity, minHeight: 120, maxHeight: .infinity)
         .help("Double-click to remove")
+        .onAppear {
+            if case .video = kind, player == nil {
+                player = AVPlayer(url: url)
+            }
+        }
+        .onDisappear {
+            player?.pause()
+            player = nil
+        }
     }
 
     @ViewBuilder
