@@ -2056,7 +2056,7 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "pinstick"
-version = "2.8.0"
+version = "2.8.1"
 dependencies = [
  "cocoa 0.25.0",
  "raw-window-handle",
