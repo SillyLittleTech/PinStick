@@ -7,16 +7,47 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <header>
+    <header id="header-controls">
       <div class="left">
         <button id="pin-btn" type="button" title="Pin window" aria-label="Pin window">📌</button>
+        <button
+          id="overlay-btn"
+          type="button"
+          title="Overlay mode"
+          aria-label="Overlay mode"
+        >
+          🪟
+        </button>
+      </div>
+      <div id="overlay-opacity-control" class="overlay-opacity-control">
+        <label for="overlay-opacity-slider" class="overlay-opacity-label">Opacity</label>
+        <input
+          type="range"
+          id="overlay-opacity-slider"
+          min="40"
+          max="100"
+          step="5"
+          value="70"
+          title="Overlay opacity"
+          aria-label="Overlay opacity"
+        />
+        <span id="overlay-opacity-value" class="overlay-opacity-value">70%</span>
       </div>
       <div class="right">
         <span id="status">Ready</span>
       </div>
     </header>
+    <div id="overlay-notice" class="overlay-notice" hidden role="status"></div>
     <main>
-      <textarea id="note" placeholder="Type your notes here..." autofocus></textarea>
+      <div id="note-surface" class="note-surface">
+        <textarea
+          id="note"
+          placeholder="Type your notes here… or double-click to add media."
+          autofocus
+        ></textarea>
+        <div id="media-stage" class="media-stage" aria-live="polite" hidden></div>
+        <input type="file" id="media-file-input" accept="image/*,video/*" hidden />
+      </div>
     </main>
     <script src="./main.js" defer></script>
   </body>
