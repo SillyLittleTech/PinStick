@@ -1,13 +1,20 @@
 const pinBtn = document.getElementById("pin-btn");
 const statusEl = document.getElementById("status");
 const noteEl = document.getElementById("note");
-const mediaPreviewEl = document.getElementById("media-preview");
+const noteSurfaceEl = document.getElementById("note-surface");
+const mediaStageEl = document.getElementById("media-stage");
+const mediaFileInputEl = document.getElementById("media-file-input");
+
+const NOTE_STORAGE_KEY = "pinstick-note";
+const LOCAL_MEDIA_STORAGE_KEY = "pinstick-local-media";
 
 const IMAGE_EXTENSIONS = /\.(avif|bmp|gif|jpe?g|png|svg|webp)(\?.*)?(#.*)?$/i;
 const VIDEO_EXTENSIONS = /\.(m4v|mov|mp4|ogg|ogv|webm)(\?.*)?(#.*)?$/i;
 const URL_PATTERN = /https?:\/\/[^\s<>"')\]]+/gi;
 const MARKDOWN_IMAGE_PATTERN = /!\[[^\]]*]\((https?:\/\/[^)\s]+)\)/gi;
 const TRAILING_PUNCTUATION_PATTERN = /[),.!?;:]+$/;
+const LOCAL_IMAGE_MIME = /^image\//i;
+const LOCAL_VIDEO_MIME = /^video\//i;
 
 const TAURI = window.__TAURI__;
 const invoke = TAURI && TAURI.tauri ? TAURI.tauri.invoke : null;
@@ -30,6 +37,23 @@ function classifyMediaUrl(url) {
   return null;
 }
 
+function classifyLocalFile(file) {
+  if (LOCAL_IMAGE_MIME.test(file.type)) {
+    return "image";
+  }
+  if (LOCAL_VIDEO_MIME.test(file.type)) {
+    return "video";
+  }
+  const name = file.name.toLowerCase();
+  if (IMAGE_EXTENSIONS.test(name)) {
+    return "image";
+  }
+  if (VIDEO_EXTENSIONS.test(name)) {
+    return "video";
+  }
+  return null;
+}
+
 function collectMediaUrls(noteText) {
   const seen = new Set();
   const mediaItems = [];
@@ -43,7 +67,7 @@ function collectMediaUrls(noteText) {
     const type = classifyMediaUrl(url);
     if (type && !seen.has(url)) {
       seen.add(url);
-      mediaItems.push({ url, type });
+      mediaItems.push({ source: "remote", url, type });
     }
     match = MARKDOWN_IMAGE_PATTERN.exec(noteText);
   }
@@ -54,7 +78,7 @@ function collectMediaUrls(noteText) {
     const type = classifyMediaUrl(url);
     if (type && !seen.has(url)) {
       seen.add(url);
-      mediaItems.push({ url, type });
+      mediaItems.push({ source: "remote", url, type });
     }
     match = URL_PATTERN.exec(noteText);
   }
@@ -62,31 +86,92 @@ function collectMediaUrls(noteText) {
   return mediaItems;
 }
 
-function createMediaCard(mediaItem) {
-  const cardEl = document.createElement("article");
-  cardEl.className = "media-card";
+function loadLocalMedia() {
+  try {
+    const raw = localStorage.getItem(LOCAL_MEDIA_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      (parsed.type === "image" || parsed.type === "video") &&
+      typeof parsed.dataUrl === "string"
+    ) {
+      return { source: "local", type: parsed.type, dataUrl: parsed.dataUrl };
+    }
+  } catch (err) {
+    console.warn("Unable to read local media:", err);
+  }
+  return null;
+}
 
-  const labelEl = document.createElement("p");
-  labelEl.className = "media-card-label";
-  labelEl.textContent = mediaItem.type === "image" ? "Image" : "Video";
+function saveLocalMedia(mediaItem) {
+  // Large videos may exceed localStorage quota; IndexedDB would be a future improvement.
+  localStorage.setItem(
+    LOCAL_MEDIA_STORAGE_KEY,
+    JSON.stringify({ type: mediaItem.type, dataUrl: mediaItem.dataUrl }),
+  );
+}
 
-  const urlEl = document.createElement("p");
-  urlEl.className = "media-card-url";
-  urlEl.textContent = mediaItem.url;
+function clearLocalMedia() {
+  localStorage.removeItem(LOCAL_MEDIA_STORAGE_KEY);
+}
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function removeUrlFromNote(noteText, url) {
+  let updated = noteText;
+  const markdownPattern = new RegExp(
+    `!\\[[^\\]]*]\\(${escapeRegExp(url)}\\)\\s*`,
+    "g",
+  );
+  updated = updated.replace(markdownPattern, "");
+  updated = updated.split(url).join("");
+  return updated.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function hasActiveMedia(noteText) {
+  if (loadLocalMedia()) {
+    return true;
+  }
+  return collectMediaUrls(noteText).length > 0;
+}
+
+function updateEditedState(noteText) {
+  const edited = noteText.trim().length > 0 || hasActiveMedia(noteText);
+  document.title = edited ? "PinStick • Edited" : "PinStick";
+  setStatus(edited ? "Edited" : "Ready");
+}
+
+function saveNote(value) {
+  localStorage.setItem(NOTE_STORAGE_KEY, value);
+}
+
+function createMediaEmbed(mediaItem) {
+  const embedEl = document.createElement("article");
+  embedEl.className = "media-embed";
+  embedEl.title = "Double-click to remove";
+
+  const src = mediaItem.source === "local" ? mediaItem.dataUrl : mediaItem.url;
   const errorEl = document.createElement("p");
   errorEl.className = "media-error";
+  errorEl.hidden = true;
   errorEl.textContent =
     mediaItem.type === "image"
       ? "Unable to load this image."
       : "Unable to load this video.";
 
   const mediaEl = document.createElement(mediaItem.type === "image" ? "img" : "video");
-  mediaEl.src = mediaItem.url;
-  mediaEl.referrerPolicy = "no-referrer";
+  mediaEl.src = src;
+  if (mediaItem.source === "remote") {
+    mediaEl.referrerPolicy = "no-referrer";
+  }
 
   if (mediaItem.type === "image") {
-    mediaEl.alt = "Embedded image preview";
+    mediaEl.alt = "Embedded image";
     mediaEl.loading = "lazy";
   } else {
     mediaEl.controls = true;
@@ -97,63 +182,99 @@ function createMediaCard(mediaItem) {
   mediaEl.addEventListener(
     "error",
     () => {
-      if (!cardEl.contains(errorEl)) {
-        cardEl.appendChild(errorEl);
-      }
+      errorEl.hidden = false;
     },
     { once: true },
   );
 
-  cardEl.appendChild(labelEl);
-  cardEl.appendChild(mediaEl);
-  cardEl.appendChild(urlEl);
-  return cardEl;
+  embedEl.addEventListener("dblclick", (event) => {
+    event.preventDefault();
+    if (mediaItem.source === "local") {
+      clearLocalMedia();
+    } else {
+      const updated = removeUrlFromNote(noteEl.value, mediaItem.url);
+      noteEl.value = updated;
+      saveNote(updated);
+    }
+    syncNoteView(noteEl.value);
+  });
+
+  embedEl.appendChild(mediaEl);
+  embedEl.appendChild(errorEl);
+  return embedEl;
 }
 
-function renderMediaPreview(noteText) {
-  if (!mediaPreviewEl) {
+function syncNoteView(noteText) {
+  if (!noteSurfaceEl || !mediaStageEl) {
     return;
   }
 
-  mediaPreviewEl.textContent = "";
+  const remoteItems = collectMediaUrls(noteText);
+  const localItem = loadLocalMedia();
+  const mediaItems = localItem ? [localItem, ...remoteItems] : remoteItems;
+  const inMediaMode = mediaItems.length > 0;
 
-  const mediaItems = collectMediaUrls(noteText);
-  if (mediaItems.length === 0) {
-    const emptyEl = document.createElement("p");
-    emptyEl.className = "media-empty";
-    emptyEl.textContent = "Paste image or video links in your note to preview them here.";
-    mediaPreviewEl.appendChild(emptyEl);
-    return;
+  noteSurfaceEl.classList.toggle("media-mode", inMediaMode);
+  mediaStageEl.hidden = !inMediaMode;
+  mediaStageEl.textContent = "";
+
+  if (inMediaMode) {
+    const fragment = document.createDocumentFragment();
+    mediaItems.forEach((item) => {
+      fragment.appendChild(createMediaEmbed(item));
+    });
+    mediaStageEl.appendChild(fragment);
   }
 
-  const fragment = document.createDocumentFragment();
-  mediaItems.forEach((mediaItem) => {
-    fragment.appendChild(createMediaCard(mediaItem));
-  });
-  mediaPreviewEl.appendChild(fragment);
+  updateEditedState(noteText);
 }
 
 function loadNote() {
   let saved = "";
   try {
-    const stored = localStorage.getItem("pinstick-note");
+    const stored = localStorage.getItem(NOTE_STORAGE_KEY);
     saved = stored === null ? "" : stored;
   } catch (err) {
     console.warn("Unable to read saved note:", err);
     setStatus("Failed to load note; starting empty");
   }
   noteEl.value = saved;
-  setEdited(saved.length > 0);
-  renderMediaPreview(saved);
+  syncNoteView(saved);
 }
 
-function setEdited(isEdited) {
-  document.title = isEdited ? "PinStick • Edited" : "PinStick";
-  setStatus(isEdited ? "Edited" : "Ready");
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }
 
-function saveNote(value) {
-  localStorage.setItem("pinstick-note", value);
+async function handleLocalFileSelected(file) {
+  const type = classifyLocalFile(file);
+  if (!type) {
+    setStatus("Unsupported file type");
+    return;
+  }
+
+  try {
+    const dataUrl = await readFileAsDataUrl(file);
+    saveLocalMedia({ type, dataUrl });
+    syncNoteView(noteEl.value);
+    setStatus("Media added");
+  } catch (err) {
+    console.error(err);
+    setStatus("Failed to load file");
+  }
+}
+
+function openMediaFilePicker() {
+  if (!mediaFileInputEl) {
+    return;
+  }
+  mediaFileInputEl.value = "";
+  mediaFileInputEl.click();
 }
 
 async function togglePin() {
@@ -184,8 +305,8 @@ function init() {
     pinBtn.disabled = true;
     setStatus("Tauri API unavailable");
   } else if (TAURI && TAURI.app) {
-    // Briefly show the app version so users can verify which build is running
-    TAURI.app.getVersion()
+    TAURI.app
+      .getVersion()
       .then((version) => {
         const previous = statusEl.textContent;
         setStatus(`v${version}`);
@@ -199,9 +320,24 @@ function init() {
   noteEl.addEventListener("input", (e) => {
     const value = e.target.value;
     saveNote(value);
-    setEdited(value.length > 0);
-    renderMediaPreview(value);
+    syncNoteView(value);
   });
+
+  noteEl.addEventListener("dblclick", () => {
+    if (noteEl.value.trim() !== "" || hasActiveMedia(noteEl.value)) {
+      return;
+    }
+    openMediaFilePicker();
+  });
+
+  if (mediaFileInputEl) {
+    mediaFileInputEl.addEventListener("change", () => {
+      const file = mediaFileInputEl.files && mediaFileInputEl.files[0];
+      if (file) {
+        handleLocalFileSelected(file);
+      }
+    });
+  }
 
   pinBtn.addEventListener("click", togglePin);
 }

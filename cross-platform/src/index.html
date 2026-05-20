@@ -16,11 +16,15 @@
       </div>
     </header>
     <main>
-      <textarea id="note" placeholder="Type your notes here..." autofocus></textarea>
-      <section id="media-preview-panel" aria-live="polite">
-        <h2>Embedded media</h2>
-        <div id="media-preview"></div>
-      </section>
+      <div id="note-surface" class="note-surface">
+        <textarea
+          id="note"
+          placeholder="Type your notes here… or double-click to add media."
+          autofocus
+        ></textarea>
+        <div id="media-stage" class="media-stage" aria-live="polite" hidden></div>
+        <input type="file" id="media-file-input" accept="image/*,video/*" hidden />
+      </div>
     </main>
     <script src="./main.js" defer></script>
   </body>
