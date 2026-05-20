@@ -187,21 +187,37 @@ fn get_cursor_position_impl(window: &tauri::Window) -> Result<(f64, f64), String
 }
 
 #[cfg(target_os = "linux")]
+fn linux_x_display() -> Result<*mut x11::xlib::Display, String> {
+    use std::sync::OnceLock;
+    use x11::xlib;
+
+    static DISPLAY: OnceLock<Result<*mut xlib::Display, String>> = OnceLock::new();
+    DISPLAY
+        .get_or_init(|| unsafe {
+            let display = xlib::XOpenDisplay(std::ptr::null());
+            if display.is_null() {
+                Err("XOpenDisplay failed".into())
+            } else {
+                Ok(display)
+            }
+        })
+        .clone()
+}
+
+#[cfg(target_os = "linux")]
 fn get_cursor_position_impl(window: &tauri::Window) -> Result<(f64, f64), String> {
     if std::env::var_os("WAYLAND_DISPLAY").is_some() {
         return Err("wayland_cursor_unavailable".into());
     }
 
-    use raw_window_handle::{HasRawWindowHandle, RawWindowHandle}; // trait for raw_window_handle()
+    use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
     use x11::xlib;
 
-    let handle = window
-        .raw_window_handle()
-        .map_err(|e| format!("raw_window_handle failed: {e}"))?;
+    let handle = window.raw_window_handle();
 
     match handle {
         RawWindowHandle::Xlib(xlib_handle) => unsafe {
-            let display = xlib_handle.display as *mut xlib::Display;
+            let display = linux_x_display()?;
             let mut root_return: xlib::Window = 0;
             let mut child_return: xlib::Window = 0;
             let mut root_x: i32 = 0;
