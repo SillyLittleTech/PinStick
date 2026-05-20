@@ -8,9 +8,10 @@
   },
   "package": {
     "productName": "PinStick",
-    "version": "2.7.1"
+    "version": "2.8.0"
   },
   "tauri": {
+    "macOSPrivateApi": true,
     "security": {
       "csp": "default-src 'self' tauri: asset: data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: data: blob: https:; media-src 'self' asset: data: blob: https:"
     },
@@ -33,7 +34,8 @@
         "height": 320,
         "resizable": true,
         "fullscreen": false,
-        "center": true
+        "center": true,
+        "transparent": true
       }
     ]
   }

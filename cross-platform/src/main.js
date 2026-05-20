@@ -1,4 +1,9 @@
 const pinBtn = document.getElementById("pin-btn");
+const overlayBtn = document.getElementById("overlay-btn");
+const headerControlsEl = document.getElementById("header-controls");
+const overlayOpacitySliderEl = document.getElementById("overlay-opacity-slider");
+const overlayOpacityValueEl = document.getElementById("overlay-opacity-value");
+const overlayNoticeEl = document.getElementById("overlay-notice");
 const statusEl = document.getElementById("status");
 const noteEl = document.getElementById("note");
 const noteSurfaceEl = document.getElementById("note-surface");
@@ -7,6 +12,17 @@ const mediaFileInputEl = document.getElementById("media-file-input");
 
 const NOTE_STORAGE_KEY = "pinstick-note";
 const LOCAL_MEDIA_STORAGE_KEY = "pinstick-local-media";
+const OVERLAY_OPACITY_STORAGE_KEY = "pinstick-overlay-opacity";
+
+const OVERLAY_POLL_MS = 60;
+const OVERLAY_POLL_FAIL_MAX = 3;
+const DEFAULT_OVERLAY_OPACITY = 0.7;
+
+let overlayActive = false;
+let overlayPollId = null;
+let overlayOpacity = DEFAULT_OVERLAY_OPACITY;
+let overlayClickThroughAvailable = true;
+let overlayPollFailures = 0;
 
 const IMAGE_EXTENSIONS = /\.(avif|bmp|gif|jpe?g|png|svg|webp)(\?.*)?(#.*)?$/i;
 const VIDEO_EXTENSIONS = /\.(m4v|mov|mp4|ogg|ogv|webm)(\?.*)?(#.*)?$/i;
@@ -277,8 +293,235 @@ function openMediaFilePicker() {
   mediaFileInputEl.click();
 }
 
+function loadOverlayOpacity() {
+  try {
+    const stored = localStorage.getItem(OVERLAY_OPACITY_STORAGE_KEY);
+    if (stored !== null) {
+      const parsed = Number.parseFloat(stored);
+      if (!Number.isNaN(parsed)) {
+        overlayOpacity = Math.min(1, Math.max(0.4, parsed));
+      }
+    }
+  } catch (err) {
+    console.warn("Unable to read overlay opacity:", err);
+  }
+  applyOverlayOpacityCss(overlayOpacity);
+  syncOverlayOpacityUi();
+}
+
+function saveOverlayOpacity(value) {
+  overlayOpacity = Math.min(1, Math.max(0.4, value));
+  localStorage.setItem(OVERLAY_OPACITY_STORAGE_KEY, String(overlayOpacity));
+  applyOverlayOpacityCss(overlayOpacity);
+}
+
+function applyOverlayOpacityCss(value) {
+  document.documentElement.style.setProperty("--overlay-opacity", String(value));
+}
+
+function opacityToSliderPercent(opacity) {
+  return Math.round(opacity * 100);
+}
+
+function sliderPercentToOpacity(percent) {
+  return Math.min(1, Math.max(0.4, percent / 100));
+}
+
+function syncOverlayOpacityUi() {
+  if (!overlayOpacitySliderEl) {
+    return;
+  }
+  const percent = opacityToSliderPercent(overlayOpacity);
+  overlayOpacitySliderEl.value = String(percent);
+  if (overlayOpacityValueEl) {
+    overlayOpacityValueEl.textContent = `${percent}%`;
+  }
+}
+
+function showOverlayNotice(message) {
+  if (!overlayNoticeEl || !message) {
+    return;
+  }
+  overlayNoticeEl.textContent = message;
+  overlayNoticeEl.hidden = false;
+}
+
+function hideOverlayNotice() {
+  if (overlayNoticeEl) {
+    overlayNoticeEl.hidden = true;
+    overlayNoticeEl.textContent = "";
+  }
+}
+
+function setOverlayUi(enabled) {
+  overlayActive = enabled;
+  document.body.classList.toggle("overlay-mode", enabled);
+  if (overlayBtn) {
+    overlayBtn.classList.toggle("overlay-active", enabled);
+    overlayBtn.title = enabled ? "Exit overlay mode" : "Overlay mode";
+    overlayBtn.setAttribute("aria-label", enabled ? "Exit overlay mode" : "Overlay mode");
+  }
+  if (pinBtn) {
+    pinBtn.disabled = enabled;
+  }
+  if (noteEl) {
+    noteEl.disabled = enabled;
+  }
+  if (!enabled) {
+    hideOverlayNotice();
+    overlayPollFailures = 0;
+  }
+  syncOverlayOpacityUi();
+}
+
+function isPointInRect(cursorX, cursorY, rect) {
+  return (
+    cursorX >= rect.left &&
+    cursorX <= rect.right &&
+    cursorY >= rect.top &&
+    cursorY <= rect.bottom
+  );
+}
+
+function isCursorOverInteractiveControls(cursorX, cursorY) {
+  if (headerControlsEl) {
+    const headerRect = headerControlsEl.getBoundingClientRect();
+    if (isPointInRect(cursorX, cursorY, headerRect)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function handleOverlayPollFailure(err) {
+  overlayPollFailures += 1;
+  console.warn("Overlay click-through sync failed:", err);
+  if (overlayPollFailures >= OVERLAY_POLL_FAIL_MAX) {
+    stopOverlayPoll();
+    if (invoke) {
+      try {
+        await invoke("set_ignore_cursor_events", { ignore: false });
+      } catch (innerErr) {
+        console.warn("Failed to restore cursor events:", innerErr);
+      }
+    }
+    showOverlayNotice(
+      "Overlay click-through is limited. Use the toolbar to exit or change opacity.",
+    );
+  }
+}
+
+async function syncOverlayClickThrough() {
+  if (!invoke || !overlayActive || !overlayClickThroughAvailable) {
+    return;
+  }
+  try {
+    const [x, y] = await invoke("get_cursor_position");
+    const overControl = isCursorOverInteractiveControls(x, y);
+    await invoke("set_ignore_cursor_events", { ignore: !overControl });
+    overlayPollFailures = 0;
+  } catch (err) {
+    await handleOverlayPollFailure(err);
+  }
+}
+
+function startOverlayPoll() {
+  stopOverlayPoll();
+  overlayPollId = window.setInterval(syncOverlayClickThrough, OVERLAY_POLL_MS);
+}
+
+function stopOverlayPoll() {
+  if (overlayPollId !== null) {
+    window.clearInterval(overlayPollId);
+    overlayPollId = null;
+  }
+}
+
+async function applyOverlayOpacity(value) {
+  saveOverlayOpacity(value);
+  syncOverlayOpacityUi();
+  if (!invoke || !overlayActive) {
+    return;
+  }
+  try {
+    await invoke("set_overlay_opacity", { opacity: overlayOpacity });
+  } catch (err) {
+    console.error(err);
+    setStatus("Failed to set overlay opacity");
+  }
+}
+
+async function loadOverlayAvailability() {
+  if (!invoke) {
+    overlayClickThroughAvailable = false;
+    return;
+  }
+  try {
+    const availability = await invoke("check_overlay_input_available");
+    overlayClickThroughAvailable = Boolean(
+      availability && availability.click_through,
+    );
+    if (availability && availability.message) {
+      showOverlayNotice(availability.message);
+    }
+  } catch (err) {
+    console.warn("Unable to check overlay availability:", err);
+    overlayClickThroughAvailable = true;
+  }
+}
+
+async function toggleOverlay() {
+  if (!invoke) {
+    return;
+  }
+  const togglingOn = !overlayActive;
+  if (togglingOn) {
+    overlayBtn.disabled = true;
+  }
+  setStatus("Toggling overlay…");
+  try {
+    if (togglingOn) {
+      await loadOverlayAvailability();
+    }
+    await invoke("set_overlay_opacity", { opacity: overlayOpacity });
+    const result = await invoke("toggle_overlay");
+    const enabled = Boolean(result && result.enabled);
+    if (result && typeof result.opacity === "number") {
+      saveOverlayOpacity(result.opacity);
+    }
+    setOverlayUi(enabled);
+    if (enabled) {
+      await invoke("set_ignore_cursor_events", { ignore: false });
+      await invoke("set_overlay_opacity", { opacity: overlayOpacity });
+      overlayPollFailures = 0;
+      if (overlayClickThroughAvailable) {
+        hideOverlayNotice();
+        startOverlayPoll();
+      } else if (invoke) {
+        await invoke("set_ignore_cursor_events", { ignore: false });
+      }
+      setStatus("Overlay on");
+    } else {
+      stopOverlayPoll();
+      await invoke("set_ignore_cursor_events", { ignore: false });
+      setStatus("Overlay off");
+    }
+  } catch (err) {
+    console.error(err);
+    setStatus("Failed to toggle overlay");
+  } finally {
+    if (togglingOn) {
+      overlayBtn.disabled = false;
+    }
+  }
+}
+
 async function togglePin() {
   if (!invoke) return;
+  if (overlayActive) {
+    setStatus("Disable overlay before pinning");
+    return;
+  }
   pinBtn.disabled = true;
   setStatus("Toggling pin…");
   try {
@@ -301,8 +544,12 @@ async function togglePin() {
 
 function init() {
   loadNote();
+  loadOverlayOpacity();
   if (!invoke) {
     pinBtn.disabled = true;
+    if (overlayBtn) {
+      overlayBtn.disabled = true;
+    }
     setStatus("Tauri API unavailable");
   } else if (TAURI && TAURI.app) {
     TAURI.app
@@ -340,6 +587,33 @@ function init() {
   }
 
   pinBtn.addEventListener("click", togglePin);
+
+  if (overlayBtn) {
+    overlayBtn.addEventListener("click", toggleOverlay);
+  }
+
+  if (overlayOpacitySliderEl) {
+    overlayOpacitySliderEl.addEventListener("input", () => {
+      const percent = Number.parseInt(overlayOpacitySliderEl.value, 10);
+      if (Number.isNaN(percent)) {
+        return;
+      }
+      applyOverlayOpacity(sliderPercentToOpacity(percent));
+      if (overlayActive) {
+        syncOverlayClickThrough();
+      }
+    });
+    overlayOpacitySliderEl.addEventListener("pointerdown", async () => {
+      if (!invoke || !overlayActive) {
+        return;
+      }
+      try {
+        await invoke("set_ignore_cursor_events", { ignore: false });
+      } catch (err) {
+        console.warn("Failed to enable slider interaction:", err);
+      }
+    });
+  }
 }
 
 document.addEventListener("DOMContentLoaded", init);
