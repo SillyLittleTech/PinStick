@@ -188,20 +188,24 @@ fn get_cursor_position_impl(window: &tauri::Window) -> Result<(f64, f64), String
 
 #[cfg(target_os = "linux")]
 fn linux_x_display() -> Result<*mut x11::xlib::Display, String> {
-    use std::sync::OnceLock;
+    use std::cell::RefCell;
     use x11::xlib;
 
-    static DISPLAY: OnceLock<Result<*mut xlib::Display, String>> = OnceLock::new();
-    DISPLAY
-        .get_or_init(|| unsafe {
-            let display = xlib::XOpenDisplay(std::ptr::null());
+    thread_local! {
+        static DISPLAY: RefCell<Option<*mut xlib::Display>> = RefCell::new(None);
+    }
+
+    DISPLAY.with(|cell| {
+        let mut guard = cell.borrow_mut();
+        if guard.is_none() {
+            let display = unsafe { xlib::XOpenDisplay(std::ptr::null()) };
             if display.is_null() {
-                Err("XOpenDisplay failed".into())
-            } else {
-                Ok(display)
+                return Err("XOpenDisplay failed".into());
             }
-        })
-        .clone()
+            *guard = Some(display);
+        }
+        Ok(*guard.as_ref().unwrap())
+    })
 }
 
 #[cfg(target_os = "linux")]
