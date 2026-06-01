@@ -25,6 +25,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
+    func windowWillMiniaturize(_ notification: Notification) {
+        guard
+            let miniaturizingWindow = notification.object as? NSWindow,
+            let image = miniaturizingWindow.contentView?.snapshotImage()
+        else {
+            return
+        }
+        miniaturizingWindow.miniwindowImage = image
+    }
+
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         if sender.isDocumentEdited {
             let alert = NSAlert()
@@ -47,6 +57,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return true
+    }
+}
+
+private extension NSView {
+    func snapshotImage() -> NSImage? {
+        guard bounds.width > 0, bounds.height > 0 else {
+            return nil
+        }
+        guard let bitmap = bitmapImageRepForCachingDisplay(in: bounds) else {
+            return nil
+        }
+        cacheDisplay(in: bounds, to: bitmap)
+        let image = NSImage(size: bounds.size)
+        image.addRepresentation(bitmap)
+        return image
     }
 }
 
