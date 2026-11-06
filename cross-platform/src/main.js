@@ -361,9 +361,6 @@ function setOverlayUi(enabled) {
     overlayBtn.title = enabled ? "Exit overlay mode" : "Overlay mode";
     overlayBtn.setAttribute("aria-label", enabled ? "Exit overlay mode" : "Overlay mode");
   }
-  if (pinBtn) {
-    pinBtn.disabled = enabled;
-  }
   if (noteEl) {
     noteEl.disabled = enabled;
   }
@@ -384,13 +381,13 @@ function isPointInRect(cursorX, cursorY, rect) {
 }
 
 function isCursorOverInteractiveControls(cursorX, cursorY) {
-  if (headerControlsEl) {
-    const headerRect = headerControlsEl.getBoundingClientRect();
-    if (isPointInRect(cursorX, cursorY, headerRect)) {
-      return true;
+  if (noteSurfaceEl) {
+    const noteSurfaceRect = noteSurfaceEl.getBoundingClientRect();
+    if (isPointInRect(cursorX, cursorY, noteSurfaceRect)) {
+      return false;
     }
   }
-  return false;
+  return true;
 }
 
 async function handleOverlayPollFailure(err) {
@@ -518,10 +515,6 @@ async function toggleOverlay() {
 
 async function togglePin() {
   if (!invoke) return;
-  if (overlayActive) {
-    setStatus("Disable overlay before pinning");
-    return;
-  }
   pinBtn.disabled = true;
   setStatus("Toggling pin…");
   try {

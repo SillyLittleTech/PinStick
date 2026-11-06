@@ -192,7 +192,7 @@ fn linux_x_display() -> Result<*mut x11::xlib::Display, String> {
     use x11::xlib;
 
     thread_local! {
-        static DISPLAY: RefCell<Option<*mut xlib::Display>> = RefCell::new(None);
+        static DISPLAY: RefCell<Option<*mut xlib::Display>> = const { RefCell::new(None) };
     }
 
     DISPLAY.with(|cell| {
@@ -232,7 +232,7 @@ fn get_cursor_position_impl(window: &tauri::Window) -> Result<(f64, f64), String
 
             let ok = xlib::XQueryPointer(
                 display,
-                xlib_handle.window as u64,
+                xlib_handle.window,
                 &mut root_return,
                 &mut child_return,
                 &mut root_x,
@@ -264,17 +264,17 @@ fn toggle_pin(
     pin_store: State<PinStore>,
     overlay_store: State<OverlayStore>,
 ) -> Result<PinState, String> {
-    let overlay = overlay_store.0.lock().unwrap_or_else(|e| e.into_inner());
-    if overlay.enabled {
-        return Err("Disable overlay before changing pin state.".into());
-    }
-    drop(overlay);
-
+    let mut overlay = overlay_store.0.lock().unwrap_or_else(|e| e.into_inner());
     let mut pinned = pin_store.0.lock().unwrap_or_else(|e| e.into_inner());
     let next = !*pinned;
-    window
-        .set_always_on_top(next)
-        .map_err(|e| format!("Failed to toggle pin: {e}"))?;
+
+    if overlay.enabled {
+        overlay.saved_pin = next;
+    } else {
+        window
+            .set_always_on_top(next)
+            .map_err(|e| format!("Failed to toggle pin: {e}"))?;
+    }
     *pinned = next;
     Ok(PinState { pinned: next })
 }
